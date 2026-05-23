@@ -1,9 +1,10 @@
 #include "Server.hpp"
+#include "Logger.hpp"
 
 Server::Server(int port, const std::string &password) : _port(port), _password(password) {
-    std::cout << "Server created on port " << _port << " with password: " << _password << std::endl;
+    Logger::info("Server created on port " + std::to_string(_port) + " with password: " + _password);
 }
 
 Server::~Server() {
-    std::cout << "Server on port " << _port << " is shutting down." << std::endl;
+    Logger::info("Server on port " + std::to_string(_port) + " is shutting down.");
 }
