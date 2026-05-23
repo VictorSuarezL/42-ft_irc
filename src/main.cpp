@@ -17,9 +17,6 @@ int main(int argc, char *argv[])
         while (true)
         // for(int i = 0; i < 10; ++i)
         {
-
-            // if(server.checkConnections() > 0) {
-            //     Logger::info("New connection established.");
             server.run();
             // Logger::debug("Server is running... (iteration " + std::to_string(i) + ")");
         }

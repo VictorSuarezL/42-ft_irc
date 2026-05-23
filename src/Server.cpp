@@ -30,17 +30,15 @@ Server::Server(const std::string &port, const std::string &password) : _port(0),
 
 Server::~Server()
 {
+    for (size_t i = 0; i < fds.size(); ++i)
+        close(fds[i].fd);
     Logger::info("Server on port " + numberToString(_port) + " is shutting down.");
 }
 
-// int Server::checkConnections(void) {
-//     // Placeholder for connection checking logic
-//     Logger::info("Checking for new connections...");
-//     return 0; // Return 0 for now, indicating no new connections
-// }
-
 void Server::createSocket()
 {
+    std::memset(&_address, 0, sizeof(_address));
+
     // Create a socket
     // AF_INET: IPv4, SOCK_STREAM: TCP, 0: default protocol
     _socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -66,7 +64,7 @@ void Server::createSocket()
 
     if (bind(_socket, (struct sockaddr *)&_address, sizeof(_address)) < 0)
     {
-        Logger::error("Failed to bind socket to port " + numberToString(_port) + ".");
+        Logger::error("Failed to bind socket to port " + numberToString(_port) + ": " + std::string(std::strerror(errno)));
         exit(EXIT_FAILURE);
     }
 
@@ -87,22 +85,68 @@ void Server::createSocket()
 
 void Server::run(void)
 {
-    // Placeholder for server's main loop logic
-    // Logger::info("Running server on port " + numberToString(_port) + "...");
-    // Here you would typically use poll() to wait for events on the file descriptors in fds
-    poll(&fds[0], fds.size(), 0); // Non-blocking poll to check for events
-    
-    for(size_t i = 0; i < fds.size(); ++i) {
-        if (fds[i].revents & POLLIN) {
-            if (fds[i].fd == _socket) {
-                // Handle new incoming connection
-                Logger::info("New connection detected on server socket.");
-                // Accept the new connection and add it to fds
-            } else {
-                // Handle data from an existing client
-                Logger::info("Data available from client socket: " + numberToString(fds[i].fd));
-                // Read data from the client and process it
-            }
+    int ready = poll(&fds[0], fds.size(), -1);
+
+    if (ready < 0)
+    {
+        Logger::error("poll failed.");
+        return;
+    }
+
+    for (size_t i = 0; i < fds.size(); ++i)
+    {
+        if (fds[i].revents & POLLIN)
+        {
+            if (fds[i].fd == _socket)
+                acceptClient();
+            else
+                receiveFromClient(i);
         }
     }
+}
+
+void Server::acceptClient(void)
+{
+    sockaddr_in clientAddress;
+    socklen_t clientLength = sizeof(clientAddress);
+
+    std::memset(&clientAddress, 0, sizeof(clientAddress));
+    int clientSocket = accept(_socket, (struct sockaddr *)&clientAddress, &clientLength);
+
+    if (clientSocket < 0)
+    {
+        Logger::error("Failed to accept new client.");
+        return;
+    }
+    if (fcntl(clientSocket, F_SETFL, O_NONBLOCK) < 0)
+    {
+        Logger::error("Failed to set client socket to non-blocking mode.");
+        close(clientSocket);
+        return;
+    }
+
+    struct pollfd pfd;
+    pfd.fd = clientSocket;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    fds.push_back(pfd);
+
+    Logger::info("Client connected on socket " + numberToString(clientSocket) + ".");
+}
+
+void Server::receiveFromClient(size_t index)
+{
+    char buffer[512];
+    int bytesRead = recv(fds[index].fd, buffer, sizeof(buffer) - 1, 0);
+
+    if (bytesRead <= 0)
+    {
+        Logger::info("Client disconnected from socket " + numberToString(fds[index].fd) + ".");
+        close(fds[index].fd);
+        fds.erase(fds.begin() + index);
+        return;
+    }
+
+    buffer[bytesRead] = '\0';
+    Logger::info("Received from socket " + numberToString(fds[index].fd) + ": " + std::string(buffer));
 }

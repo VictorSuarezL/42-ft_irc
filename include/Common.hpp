@@ -8,7 +8,9 @@
 # define RESET   "\033[0m"
 
 # include <iostream>
+# include <cerrno>
 # include <cstdlib>
+# include <cstring>
 # include <sstream>
 # include <string>
 # include <vector>

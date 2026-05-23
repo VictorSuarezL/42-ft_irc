@@ -14,6 +14,8 @@ class Server
         std::string _serverName;
         std::vector<pollfd> fds; // List of file descriptors to monitor for incoming connections
         bool parsePort(const std::string &port);
+        void acceptClient(void);
+        void receiveFromClient(size_t index);
 
     public:
         Server(const std::string &port, const std::string &password);
