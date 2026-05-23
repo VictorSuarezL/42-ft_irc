@@ -2,8 +2,11 @@ CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 
 SRCDIR = src
+INCDIR = include
+OBJDIR = obj
+
 INFILES = $(wildcard $(SRCDIR)/*.cpp)
-OBJFILES = $(INFILES:.cpp=.o)
+OBJFILES = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(INFILES))
 
 NAME = ircserv
 
@@ -12,11 +15,12 @@ all: $(NAME)
 $(NAME): $(OBJFILES)
 	$(CXX) $(CXXFLAGS) $(OBJFILES) -o $(NAME)
 
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+	mkdir -p $(OBJDIR)
+	$(CXX) $(CXXFLAGS) -I$(INCDIR) -c $< -o $@
 
 clean:
-	rm -f $(OBJFILES)
+	rm -rf $(OBJDIR)
 
 fclean: clean
 	rm -f $(NAME)
