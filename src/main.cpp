@@ -1,6 +1,15 @@
-#include <stdio.h>
+#include "Server.hpp"
 
-int main() {
-    printf("Hello, World!\n");
-    return 0;
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <port> <password>" << std::endl;
+        return 1;
+    }
+    else {
+        int port = std::stoi(argv[1]);
+        std::string password = argv[2];
+        
+        Server server(port, password);
+
+    }
 }
