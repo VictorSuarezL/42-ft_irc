@@ -1,5 +1,5 @@
-CXX = clang++
-CXXFLAGS = -Wall -Wextra -Werror -pedantic -std=c++98
+CXX = c++
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I$(SRCDIR)/include
 
 SRCDIR = src
 INCDIR = include
