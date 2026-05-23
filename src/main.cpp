@@ -1,6 +1,29 @@
+#include <Server.hpp>
+#include <Logger.hpp>
 #include <Message.hpp>
 #include <iostream>
-int main() {
+
+int main(int argc, char *argv[])
+{
+    if (argc != 3)
+    {
+        Logger::error("Usage: " + std::string(argv[0]) + " <port> <password>");
+        return 1;
+    }
+    else
+    {
+        std::string password = argv[2];
+
+        Server server(argv[1], password);
+
+        while (true)
+        // for(int i = 0; i < 10; ++i)
+        {
+            server.run();
+            // Logger::debug("Server is running... (iteration " + std::to_string(i) + ")");
+        }
+    }
+
     Message msg;
     msg.setCommand("PRIVMSG");
     msg.addArg("#channel");
