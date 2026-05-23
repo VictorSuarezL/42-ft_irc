@@ -1,5 +1,5 @@
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I$(SRCDIR)/include
 
 SRCDIR = src
 INFILES = $(wildcard $(SRCDIR)/*.cpp)
