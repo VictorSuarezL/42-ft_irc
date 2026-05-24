@@ -30,3 +30,16 @@ std::vector<std::string> Message::getArgs() const {
 int Message::getArgCount() const {
     return args.size();
 }
+
+// Print the message content (for debugging)
+void Message::printMessage() const {
+    std::cout << "*** MESSAGE CONTENT ***" << std::endl;
+    std::cout << "COMMAND: " << command << std::endl;
+    std::cout << "ARGUMENTS: ";
+    for (size_t i = 0; i < args.size(); ++i) {
+        std::cout << args[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "TRAILING: " << trailing << std::endl;
+    std::cout << "*** END MESSAGE ***" << std::endl;
+}
