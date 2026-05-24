@@ -18,6 +18,7 @@
 # include <netinet/in.h>
 # include <unistd.h>
 # include <fcntl.h>
+# include <map>
 
 inline std::string numberToString(int number)
 {

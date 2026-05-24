@@ -132,21 +132,33 @@ void Server::acceptClient(void)
     _fds.push_back(pfd);
 
     Logger::info("Client connected on socket " + numberToString(clientSocket) + ".");
+
+    User user;
+    user.setFd(clientSocket);
+    _users[clientSocket] = user;
+
+    Logger::debug("Degub set fd passed");
 }
 
 void Server::receiveFromClient(size_t index)
 {
-    char buffer[512];
+    char buffer[512]; // 1024??
+    memset(buffer, 0, sizeof(buffer));
     int bytesRead = recv(_fds[index].fd, buffer, sizeof(buffer) - 1, 0);
 
     if (bytesRead <= 0)
     {
         Logger::info("Client disconnected from socket " + numberToString(_fds[index].fd) + ".");
         close(_fds[index].fd);
+        _users.erase(_fds[index].fd);
         _fds.erase(_fds.begin() + index);
         return;
     }
+    std::string data(buffer, bytesRead);
+
+    User &user = _users[_fds[index].fd];
+    user.appendToInputBuffer(data);
 
     buffer[bytesRead] = '\0';
-    Logger::info("Received from socket " + numberToString(_fds[index].fd) + ": " + std::string(buffer));
+    Logger::debug("Received from socket " + numberToString(_fds[index].fd) + ": " + std::string(buffer));
 }
