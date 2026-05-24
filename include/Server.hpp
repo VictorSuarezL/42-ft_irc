@@ -4,6 +4,7 @@
 #include <Common.hpp>
 #include <poll.h>
 #include <User.hpp>
+#include <Message.hpp>
 
 class Server
 {
@@ -25,6 +26,19 @@ class Server
         ~Server();
         void createSocket();
         void run(void);
+        void dispatchMessage(const Message& msg);
+        void handlePass(const Message& msg);
+        void handleNick(const Message& msg);
+        void handleUser(const Message& msg);
+        void handleJoin(const Message& msg);
+        void handlePart(const Message& msg);
+        void handlePing(const Message& msg);
+        void handleMode(const Message& msg);
+        void handleKick(const Message& msg);
+        void handleInvite(const Message& msg);
+        void handleTopic(const Message& msg);
+        void handlePrivMsg(const Message& msg);
+        void handleUnknown(const Message& msg);
 
         // int checkConnections(void);
         

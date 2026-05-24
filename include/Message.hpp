@@ -1,5 +1,8 @@
 #include <string>
 #include <vector>
+#include <iostream>
+#include <sstream>
+
 class Message {
     public:
         Message();
@@ -11,6 +14,8 @@ class Message {
         void addArg(const std::string& arg);
         std::vector<std::string> getArgs() const;
         int getArgCount() const;
+        void printMessage() const;
+        Message parse(const std::string& raw);
     private:
         std::string command;
         std::vector<std::string> args;
