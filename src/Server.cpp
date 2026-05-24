@@ -150,3 +150,108 @@ void Server::receiveFromClient(size_t index)
     buffer[bytesRead] = '\0';
     Logger::info("Received from socket " + numberToString(fds[index].fd) + ": " + std::string(buffer));
 }
+
+void Server::handlePass(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement PASS command handling logic here
+}
+
+void Server::handleNick(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement NICK command handling logic here
+}
+
+void Server::handleUser(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement USER command handling logic here
+}
+
+void Server::handleJoin(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement JOIN command handling logic here
+}
+
+void Server::handlePart(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement PART command handling logic here
+}
+
+void Server::handlePing(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement PING command handling logic here
+}
+
+void Server::handleMode(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement MODE command handling logic here
+}
+
+void Server::handleKick(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement KICK command handling logic here
+}
+
+void Server::handleInvite(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement INVITE command handling logic here
+}
+
+void Server::handleTopic(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement TOPIC command handling logic here
+}
+
+void Server::handlePrivMsg(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement PRIVMSG command handling logic here
+}
+
+void Server::handleUnknown(const Message& msg) {
+    std::cout << "Unknown command: " << msg.getCommand() << std::endl;
+    // Implement handling for unknown commands here
+}
+
+void Server::dispatchMessage(const Message& msg) {
+    std::string cmd = msg.getCommand();
+    // remove \n and \r if present
+    if (!cmd.empty() && cmd[cmd.size() - 1] == '\n')
+        cmd.erase(cmd.size() - 1);
+    if (!cmd.empty() && cmd[cmd.size() - 1] == '\r')
+        cmd.erase(cmd.size() - 1);
+    toLowerCase(cmd);
+    if (cmd == PASS_STR)
+        handlePass(msg);
+    else if (cmd == NICK_STR)
+        handleNick(msg);
+    else if (cmd == USER_STR)
+        handleUser(msg);
+    else if (cmd == JOIN_STR)
+        handleJoin(msg);
+    else if (cmd == PART_STR)
+        handlePart(msg);
+    else if (cmd == PING_STR)
+        handlePing(msg);
+    else if (cmd == MODE_STR)
+        handleMode(msg);
+    else if (cmd == KICK_STR)
+        handleKick(msg);
+    else if (cmd == INVITE_STR)
+        handleInvite(msg);
+    else if (cmd == TOPIC_STR)
+        handleTopic(msg);
+    else if (cmd == PRIVMSG_STR)
+        handlePrivMsg(msg);
+    else
+        handleUnknown(msg);
+}
