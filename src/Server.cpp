@@ -30,8 +30,8 @@ Server::Server(const std::string &port, const std::string &password) : _port(0),
 
 Server::~Server()
 {
-    for (size_t i = 0; i < fds.size(); ++i)
-        close(fds[i].fd);
+    for (size_t i = 0; i < _fds.size(); ++i)
+        close(_fds[i].fd);
     Logger::info("Server on port " + numberToString(_port) + " is shutting down.");
 }
 
@@ -78,14 +78,14 @@ void Server::createSocket()
     pfd.fd = _socket;
     pfd.events = POLLIN; // Monitor for incoming connections
     pfd.revents = 0;     // Initialize revents to 0
-    fds.push_back(pfd);  // Add the server socket to the list of file descriptors to monitor
+    _fds.push_back(pfd);  // Add the server socket to the list of file descriptors to monitor
 
     Logger::info("Setting up server socket on port " + numberToString(_port) + "...");
 }
 
 void Server::run(void)
 {
-    int ready = poll(&fds[0], fds.size(), -1);
+    int ready = poll(&_fds[0], _fds.size(), -1);
 
     if (ready < 0)
     {
@@ -93,11 +93,11 @@ void Server::run(void)
         return;
     }
 
-    for (size_t i = 0; i < fds.size(); ++i)
+    for (size_t i = 0; i < _fds.size(); ++i)
     {
-        if (fds[i].revents & POLLIN)
+        if (_fds[i].revents & POLLIN)
         {
-            if (fds[i].fd == _socket)
+            if (_fds[i].fd == _socket)
                 acceptClient();
             else
                 receiveFromClient(i);
@@ -129,26 +129,38 @@ void Server::acceptClient(void)
     pfd.fd = clientSocket;
     pfd.events = POLLIN;
     pfd.revents = 0;
-    fds.push_back(pfd);
+    _fds.push_back(pfd);
 
     Logger::info("Client connected on socket " + numberToString(clientSocket) + ".");
+
+    User user;
+    user.setFd(clientSocket);
+    _users[clientSocket] = user;
+
+    Logger::debug("Degub set fd passed");
 }
 
 void Server::receiveFromClient(size_t index)
 {
-    char buffer[512];
-    int bytesRead = recv(fds[index].fd, buffer, sizeof(buffer) - 1, 0);
+    char buffer[512]; // 1024??
+    memset(buffer, 0, sizeof(buffer));
+    int bytesRead = recv(_fds[index].fd, buffer, sizeof(buffer) - 1, 0);
 
     if (bytesRead <= 0)
     {
-        Logger::info("Client disconnected from socket " + numberToString(fds[index].fd) + ".");
-        close(fds[index].fd);
-        fds.erase(fds.begin() + index);
+        Logger::info("Client disconnected from socket " + numberToString(_fds[index].fd) + ".");
+        close(_fds[index].fd);
+        _users.erase(_fds[index].fd);
+        _fds.erase(_fds.begin() + index);
         return;
     }
+    std::string data(buffer, bytesRead);
+
+    User &user = _users[_fds[index].fd];
+    user.appendToInputBuffer(data);
 
     buffer[bytesRead] = '\0';
-    Logger::info("Received from socket " + numberToString(fds[index].fd) + ": " + std::string(buffer));
+    Logger::debug("Received from socket " + numberToString(_fds[index].fd) + ": " + std::string(buffer));
 }
 
 void Server::handlePass(const Message& msg) {

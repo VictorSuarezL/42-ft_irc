@@ -1,11 +1,13 @@
 #include <User.hpp>
+#include <Logger.hpp>
+
 User::User() {
     _fd = -1;
-    _nickname = nullptr;
-    _username = nullptr;
+    _nickname = "";
+    _username = "";
     _isRegistered = false;
-    inputBuffer = nullptr;
-    outputBuffer = nullptr;
+    inputBuffer = "";
+    outputBuffer = "";
     toDelete = false;
 }
 
@@ -68,6 +70,7 @@ void User::setOutputBuffer(const std::string& outputBuffer) {
 }
 
 void User::appendToInputBuffer(const std::string& data) {
+    Logger::debug("Appending to input buffer of user on socket " + numberToString(_fd) + ": " + data);
     inputBuffer += data;
 }
 
