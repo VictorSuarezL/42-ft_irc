@@ -2,6 +2,7 @@
 #include <Logger.hpp>
 #include <Message.hpp>
 #include <iostream>
+#include <Channel.hpp>
 
 int main(int argc, char *argv[])
 {
