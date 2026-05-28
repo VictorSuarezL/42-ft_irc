@@ -107,7 +107,7 @@ void Server::run(void)
 
 void Server::acceptClient(void)
 {
-    sockaddr_in clientAddress;
+    sockaddr_in clientAddress; // Structure to hold client address information
     socklen_t clientLength = sizeof(clientAddress);
 
     std::memset(&clientAddress, 0, sizeof(clientAddress));
@@ -125,19 +125,20 @@ void Server::acceptClient(void)
         return;
     }
 
+    // Add the new client socket to the list of file descriptors to monitor
     struct pollfd pfd;
     pfd.fd = clientSocket;
     pfd.events = POLLIN;
     pfd.revents = 0;
     _fds.push_back(pfd);
 
-    Logger::info("Client connected on socket " + numberToString(clientSocket) + ".");
+    Logger::debug("Client connected on socket " + numberToString(clientSocket) + ".");
 
     User user;
     user.setFd(clientSocket);
     _users[clientSocket] = user;
 
-    Logger::debug("Degub set fd passed");
+    Logger::debug("Debug set fd passed");
 }
 
 void Server::receiveFromClient(size_t index)
