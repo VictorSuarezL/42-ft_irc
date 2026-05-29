@@ -25,11 +25,14 @@ class User {
         bool getToDelete() const;
         void setToDelete(bool toDelete);
         void registerUser();
+        void setHasValidPassword(bool hasValidPassword);
+        bool getHasValidPassword() const;
     private:
         int _fd;
         std::string _nickname;
         std::string _username;
         bool _isRegistered;
+        bool _hasValidPassword;
         std::string _inputBuffer;
         std::string _outputBuffer;
         bool _toDelete;

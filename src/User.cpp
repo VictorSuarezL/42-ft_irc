@@ -9,6 +9,7 @@ User::User() {
     _inputBuffer = "";
     _outputBuffer = "";
     _toDelete = false;
+    _hasValidPassword = false;
 }
 
 User::~User() {}
@@ -34,6 +35,7 @@ std::string User::getUsername() const {
 }
 
 void User::setUsername(const std::string& username) {
+    Logger::debug("setUsername called");
     _username = username;
 }
 
@@ -50,6 +52,7 @@ bool User::isRegistered() const {
 }
 
 void User::setIsRegistered(bool isRegistered) {
+    Logger::debug("Setting isRegistered for user on socket " + numberToString(_fd) + " to " + (isRegistered ? "true" : "false"));
     _isRegistered = isRegistered;
 }
 
@@ -77,9 +80,9 @@ void User::appendToInputBuffer(const std::string& data) {
 std::vector<std::string> User::extractCompleteMessages() {
     std::vector<std::string> messages;
     size_t pos;
-    while ((pos = _inputBuffer.find("\r\n")) != std::string::npos) {
+    while ((pos = _inputBuffer.find("\n")) != std::string::npos) {
         messages.push_back(_inputBuffer.substr(0, pos));
-        _inputBuffer.erase(0, pos + 2);
+        _inputBuffer.erase(0, pos + 1);
     }
     return messages;
 }
@@ -106,4 +109,11 @@ void User::registerUser() {
     }
 }
 
+void User::setHasValidPassword(bool hasValidPassword) {
+    Logger::debug("Setting hasValidPassword for user");
+    this->_hasValidPassword = hasValidPassword;
+}
 
+bool User::getHasValidPassword() const {
+    return this->_hasValidPassword;
+}
