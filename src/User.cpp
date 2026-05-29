@@ -6,9 +6,9 @@ User::User() {
     _nickname = "";
     _username = "";
     _isRegistered = false;
-    inputBuffer = "";
-    outputBuffer = "";
-    toDelete = false;
+    _inputBuffer = "";
+    _outputBuffer = "";
+    _toDelete = false;
 }
 
 User::~User() {}
@@ -54,50 +54,50 @@ void User::setIsRegistered(bool isRegistered) {
 }
 
 std::string User::getInputBuffer() const {
-    return inputBuffer;
+    return _inputBuffer;
 }
 
 void User::setInputBuffer(const std::string& inputBuffer) {
-    this->inputBuffer = inputBuffer;
+    this->_inputBuffer = inputBuffer;
 }
 
 std::string User::getOutputBuffer() const {
-    return outputBuffer;
+    return _outputBuffer;
 }
 
 void User::setOutputBuffer(const std::string& outputBuffer) {
-    this->outputBuffer = outputBuffer;
+    this->_outputBuffer = outputBuffer;
 }
 
 void User::appendToInputBuffer(const std::string& data) {
     Logger::debug("Appending to input buffer of user on socket " + numberToString(_fd) + ": " + data);
-    inputBuffer += data;
+    _inputBuffer += data;
 }
 
 std::vector<std::string> User::extractCompleteMessages() {
     std::vector<std::string> messages;
     size_t pos;
-    while ((pos = inputBuffer.find("\r\n")) != std::string::npos) {
-        messages.push_back(inputBuffer.substr(0, pos));
-        inputBuffer.erase(0, pos + 2);
+    while ((pos = _inputBuffer.find("\r\n")) != std::string::npos) {
+        messages.push_back(_inputBuffer.substr(0, pos));
+        _inputBuffer.erase(0, pos + 2);
     }
     return messages;
 }
 
 void User::appendToOutputBuffer(const std::string& data) {
-    outputBuffer += data;
+    _outputBuffer += data;
 }
 
 bool User::hasPendingOutput() const {
-    return !outputBuffer.empty();
+    return !_outputBuffer.empty();
 }
 
 bool User::getToDelete() const {
-    return toDelete;
+    return _toDelete;
 }
 
 void User::setToDelete(bool toDelete) {
-    this->toDelete = toDelete;
+    this->_toDelete = toDelete;
 }
 
 void User::registerUser() {

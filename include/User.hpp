@@ -30,7 +30,7 @@ class User {
         std::string _nickname;
         std::string _username;
         bool _isRegistered;
-        std::string inputBuffer;
-        std::string outputBuffer;
-        bool toDelete;
+        std::string _inputBuffer;
+        std::string _outputBuffer;
+        bool _toDelete;
 };
