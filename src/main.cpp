@@ -1,6 +1,7 @@
 #include <Server.hpp>
 #include <Logger.hpp>
 #include <iostream>
+#include <Channel.hpp>
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
