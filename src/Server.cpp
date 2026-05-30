@@ -107,7 +107,7 @@ void Server::run(void)
 
 void Server::acceptClient(void)
 {
-    sockaddr_in clientAddress;
+    sockaddr_in clientAddress; // Structure to hold client address information
     socklen_t clientLength = sizeof(clientAddress);
 
     std::memset(&clientAddress, 0, sizeof(clientAddress));
@@ -125,19 +125,20 @@ void Server::acceptClient(void)
         return;
     }
 
+    // Add the new client socket to the list of file descriptors to monitor
     struct pollfd pfd;
     pfd.fd = clientSocket;
     pfd.events = POLLIN;
     pfd.revents = 0;
     _fds.push_back(pfd);
 
-    Logger::info("Client connected on socket " + numberToString(clientSocket) + ".");
+    Logger::debug("Client connected on socket " + numberToString(clientSocket) + ".");
 
     User user;
     user.setFd(clientSocket);
     _users[clientSocket] = user;
 
-    Logger::debug("Degub set fd passed");
+    Logger::debug("Debug set fd passed");
 }
 
 void Server::receiveFromClient(size_t index)
@@ -158,83 +159,100 @@ void Server::receiveFromClient(size_t index)
 
     User &user = _users[_fds[index].fd];
     user.appendToInputBuffer(data);
-
     buffer[bytesRead] = '\0';
-    Logger::debug("Received from socket " + numberToString(_fds[index].fd) + ": " + std::string(buffer));
+
+    std::vector<std::string> rawMessages = user.extractCompleteMessages();
+    for (size_t i = 0; i < rawMessages.size(); ++i)
+    {
+        Message msg = Message().parse(rawMessages[i]);
+        dispatchMessage(user, msg);
+    }
+
+    // Logger::debug("Received from socket " + numberToString(_fds[index].fd) + ": " + std::string(buffer));
 }
 
-void Server::handlePass(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
-    // Implement PASS command handling logic here
+void Server::handlePass(User& user, const Message& msg) {
+    Logger::info("Handling command " + msg.getCommand());
+
+    if (msg.getArgCount() < 1)
+    {
+        Logger::warning("PASS command received with insufficient arguments.");
+        // Send an error message back to the user here
+        return;
+    }
+
+    std::string password = msg.getArgs()[0];
+    Logger::debug("Received password: " + password);
+    if (password != _password)
+    {
+        Logger::warning("User on socket " + numberToString(user.getFd()) + " provided an invalid password.");
+        // Send an error message back to the user here
+        sendToUser(user, ":" + _serverName + " 464 * :Password incorrect");
+        return;
+    }
+    user.setHasValidPassword(true);
 }
 
-void Server::handleNick(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+void Server::handleNick(User& user, const Message& msg) {
+    Logger::info("Handling command " + msg.getCommand());
     // Implement NICK command handling logic here
+    std::string nickname = msg.getArgs()[0];
+    Logger::debug("Received nickname: " + nickname + " for user on socket " + numberToString(user.getFd()));
+    user.setNickname(nickname);
 }
 
-void Server::handleUser(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+void Server::handleUser(User& user, const Message& msg) {
+    Logger::info("Handling command " + msg.getCommand() + " for user on socket " + numberToString(user.getFd()));
     // Implement USER command handling logic here
+    user.setUsername(msg.getArgs()[0]);
 }
 
 void Server::handleJoin(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+    Logger::info("Handling command " + msg.getCommand());
     // Implement JOIN command handling logic here
 }
 
 void Server::handlePart(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+    Logger::info("Handling command " + msg.getCommand());
     // Implement PART command handling logic here
 }
 
 void Server::handlePing(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+    Logger::info("Handling command " + msg.getCommand());
     // Implement PING command handling logic here
 }
 
 void Server::handleMode(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+    Logger::info("Handling command " + msg.getCommand());
     // Implement MODE command handling logic here
 }
 
 void Server::handleKick(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+    Logger::info("Handling command " + msg.getCommand());
     // Implement KICK command handling logic here
 }
 
 void Server::handleInvite(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+    Logger::info("Handling command " + msg.getCommand());
     // Implement INVITE command handling logic here
 }
 
 void Server::handleTopic(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+    Logger::info("Handling command " + msg.getCommand());
     // Implement TOPIC command handling logic here
 }
 
 void Server::handlePrivMsg(const Message& msg) {
-    std::cout << "Handling command ";
-    std::cout << msg.getCommand() << std::endl;
+    Logger::info("Handling command " + msg.getCommand());
     // Implement PRIVMSG command handling logic here
 }
 
 void Server::handleUnknown(const Message& msg) {
-    std::cout << "Unknown command: " << msg.getCommand() << std::endl;
+    Logger::info("Handling command " + msg.getCommand());
     // Implement handling for unknown commands here
 }
 
-void Server::dispatchMessage(const Message& msg) {
+void Server::dispatchMessage(User& user, const Message& msg) {
     std::string cmd = msg.getCommand();
     // remove \n and \r if present
     if (!cmd.empty() && cmd[cmd.size() - 1] == '\n')
@@ -242,28 +260,61 @@ void Server::dispatchMessage(const Message& msg) {
     if (!cmd.empty() && cmd[cmd.size() - 1] == '\r')
         cmd.erase(cmd.size() - 1);
     toLowerCase(cmd);
-    if (cmd == PASS_STR)
-        handlePass(msg);
+
+    // if (!user.isRegistered() 
+    //     && cmd != PASS_STR 
+    //     && cmd != NICK_STR 
+    //     && cmd != USER_STR 
+    //     && cmd != PING_STR)
+    // {
+    //     Logger::warning("User on socket " + numberToString(user.getFd()) + " is not registered and sent command: " + cmd);
+    //     // Send an error message back to the user here
+    //     sendToUser(user, ":" + _serverName + " 451 * :You have not registered");
+    //     return;
+    // }
+    
+    if (cmd == PASS_STR && !user.getHasValidPassword() && !user.isRegistered())
+        handlePass(user, msg);
     else if (cmd == NICK_STR)
-        handleNick(msg);
-    else if (cmd == USER_STR)
-        handleUser(msg);
-    else if (cmd == JOIN_STR)
-        handleJoin(msg);
-    else if (cmd == PART_STR)
-        handlePart(msg);
-    else if (cmd == PING_STR)
-        handlePing(msg);
-    else if (cmd == MODE_STR)
-        handleMode(msg);
-    else if (cmd == KICK_STR)
-        handleKick(msg);
-    else if (cmd == INVITE_STR)
-        handleInvite(msg);
-    else if (cmd == TOPIC_STR)
-        handleTopic(msg);
-    else if (cmd == PRIVMSG_STR)
-        handlePrivMsg(msg);
-    else
-        handleUnknown(msg);
+        handleNick(user, msg);
+    else if (cmd == USER_STR && !user.isRegistered())
+        handleUser(user, msg);
+    else if (!user.isRegistered())
+    {
+        Logger::warning("User on socket " + numberToString(user.getFd()) + " is not registered and sent command: " + cmd);
+        // Send an error message back to the user here
+        sendToUser(user, ":" + _serverName + " 451 * :You have not registered");
+        return;
+    }
+    if (user.getHasValidPassword() && user.hasNickname() && user.hasUsername())
+    {
+        user.setIsRegistered(true);
+    }
+    if(user.isRegistered())
+    {
+        if (cmd == JOIN_STR)
+            handleJoin(msg);
+        else if (cmd == PART_STR)
+            handlePart(msg);
+        else if (cmd == PING_STR)
+            handlePing(msg);
+        else if (cmd == MODE_STR)
+            handleMode(msg);
+        else if (cmd == KICK_STR)
+            handleKick(msg);
+        else if (cmd == INVITE_STR)
+            handleInvite(msg);
+        else if (cmd == TOPIC_STR)
+            handleTopic(msg);
+        else if (cmd == PRIVMSG_STR)
+            handlePrivMsg(msg);
+        else
+            handleUnknown(msg);
+    }
+}
+
+void Server::sendToUser(User &user, const std::string &message)
+{
+    std::string response = message + "\r\n";
+    send(user.getFd(), response.c_str(), response.size(), 0);
 }
