@@ -30,8 +30,8 @@ Server::Server(const std::string &port, const std::string &password) : _port(0),
 
 Server::~Server()
 {
-    for (size_t i = 0; i < fds.size(); ++i)
-        close(fds[i].fd);
+    for (size_t i = 0; i < _fds.size(); ++i)
+        close(_fds[i].fd);
     Logger::info("Server on port " + numberToString(_port) + " is shutting down.");
 }
 
@@ -78,14 +78,14 @@ void Server::createSocket()
     pfd.fd = _socket;
     pfd.events = POLLIN; // Monitor for incoming connections
     pfd.revents = 0;     // Initialize revents to 0
-    fds.push_back(pfd);  // Add the server socket to the list of file descriptors to monitor
+    _fds.push_back(pfd);  // Add the server socket to the list of file descriptors to monitor
 
     Logger::info("Setting up server socket on port " + numberToString(_port) + "...");
 }
 
 void Server::run(void)
 {
-    int ready = poll(&fds[0], fds.size(), -1);
+    int ready = poll(&_fds[0], _fds.size(), -1);
 
     if (ready < 0)
     {
@@ -93,11 +93,11 @@ void Server::run(void)
         return;
     }
 
-    for (size_t i = 0; i < fds.size(); ++i)
+    for (size_t i = 0; i < _fds.size(); ++i)
     {
-        if (fds[i].revents & POLLIN)
+        if (_fds[i].revents & POLLIN)
         {
-            if (fds[i].fd == _socket)
+            if (_fds[i].fd == _socket)
                 acceptClient();
             else
                 receiveFromClient(i);
@@ -129,24 +129,141 @@ void Server::acceptClient(void)
     pfd.fd = clientSocket;
     pfd.events = POLLIN;
     pfd.revents = 0;
-    fds.push_back(pfd);
+    _fds.push_back(pfd);
 
     Logger::info("Client connected on socket " + numberToString(clientSocket) + ".");
+
+    User user;
+    user.setFd(clientSocket);
+    _users[clientSocket] = user;
+
+    Logger::debug("Degub set fd passed");
 }
 
 void Server::receiveFromClient(size_t index)
 {
-    char buffer[512];
-    int bytesRead = recv(fds[index].fd, buffer, sizeof(buffer) - 1, 0);
+    char buffer[512]; // 1024??
+    memset(buffer, 0, sizeof(buffer));
+    int bytesRead = recv(_fds[index].fd, buffer, sizeof(buffer) - 1, 0);
 
     if (bytesRead <= 0)
     {
-        Logger::info("Client disconnected from socket " + numberToString(fds[index].fd) + ".");
-        close(fds[index].fd);
-        fds.erase(fds.begin() + index);
+        Logger::info("Client disconnected from socket " + numberToString(_fds[index].fd) + ".");
+        close(_fds[index].fd);
+        _users.erase(_fds[index].fd);
+        _fds.erase(_fds.begin() + index);
         return;
     }
+    std::string data(buffer, bytesRead);
+
+    User &user = _users[_fds[index].fd];
+    user.appendToInputBuffer(data);
 
     buffer[bytesRead] = '\0';
-    Logger::info("Received from socket " + numberToString(fds[index].fd) + ": " + std::string(buffer));
+    Logger::debug("Received from socket " + numberToString(_fds[index].fd) + ": " + std::string(buffer));
+}
+
+void Server::handlePass(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement PASS command handling logic here
+}
+
+void Server::handleNick(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement NICK command handling logic here
+}
+
+void Server::handleUser(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement USER command handling logic here
+}
+
+void Server::handleJoin(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement JOIN command handling logic here
+}
+
+void Server::handlePart(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement PART command handling logic here
+}
+
+void Server::handlePing(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement PING command handling logic here
+}
+
+void Server::handleMode(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement MODE command handling logic here
+}
+
+void Server::handleKick(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement KICK command handling logic here
+}
+
+void Server::handleInvite(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement INVITE command handling logic here
+}
+
+void Server::handleTopic(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement TOPIC command handling logic here
+}
+
+void Server::handlePrivMsg(const Message& msg) {
+    std::cout << "Handling command ";
+    std::cout << msg.getCommand() << std::endl;
+    // Implement PRIVMSG command handling logic here
+}
+
+void Server::handleUnknown(const Message& msg) {
+    std::cout << "Unknown command: " << msg.getCommand() << std::endl;
+    // Implement handling for unknown commands here
+}
+
+void Server::dispatchMessage(const Message& msg) {
+    std::string cmd = msg.getCommand();
+    // remove \n and \r if present
+    if (!cmd.empty() && cmd[cmd.size() - 1] == '\n')
+        cmd.erase(cmd.size() - 1);
+    if (!cmd.empty() && cmd[cmd.size() - 1] == '\r')
+        cmd.erase(cmd.size() - 1);
+    toLowerCase(cmd);
+    if (cmd == PASS_STR)
+        handlePass(msg);
+    else if (cmd == NICK_STR)
+        handleNick(msg);
+    else if (cmd == USER_STR)
+        handleUser(msg);
+    else if (cmd == JOIN_STR)
+        handleJoin(msg);
+    else if (cmd == PART_STR)
+        handlePart(msg);
+    else if (cmd == PING_STR)
+        handlePing(msg);
+    else if (cmd == MODE_STR)
+        handleMode(msg);
+    else if (cmd == KICK_STR)
+        handleKick(msg);
+    else if (cmd == INVITE_STR)
+        handleInvite(msg);
+    else if (cmd == TOPIC_STR)
+        handleTopic(msg);
+    else if (cmd == PRIVMSG_STR)
+        handlePrivMsg(msg);
+    else
+        handleUnknown(msg);
 }

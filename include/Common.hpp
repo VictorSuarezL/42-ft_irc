@@ -28,4 +28,10 @@ inline std::string numberToString(int number)
     return stream.str();
 }
 
+inline void toLowerCase(std::string& str) {
+    for (size_t i = 0; i < str.size(); ++i) {
+        str[i] = std::tolower(str[i]);
+    }
+}
+
 #endif
