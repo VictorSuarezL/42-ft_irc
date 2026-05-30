@@ -6,9 +6,10 @@ User::User() {
     _nickname = "";
     _username = "";
     _isRegistered = false;
-    inputBuffer = "";
-    outputBuffer = "";
-    toDelete = false;
+    _inputBuffer = "";
+    _outputBuffer = "";
+    _toDelete = false;
+    _hasValidPassword = false;
 }
 
 User::~User() {}
@@ -34,6 +35,7 @@ std::string User::getUsername() const {
 }
 
 void User::setUsername(const std::string& username) {
+    Logger::debug("setUsername called");
     _username = username;
 }
 
@@ -50,54 +52,55 @@ bool User::isRegistered() const {
 }
 
 void User::setIsRegistered(bool isRegistered) {
+    Logger::debug("Setting isRegistered for user on socket " + numberToString(_fd) + " to " + (isRegistered ? "true" : "false"));
     _isRegistered = isRegistered;
 }
 
 std::string User::getInputBuffer() const {
-    return inputBuffer;
+    return _inputBuffer;
 }
 
 void User::setInputBuffer(const std::string& inputBuffer) {
-    this->inputBuffer = inputBuffer;
+    this->_inputBuffer = inputBuffer;
 }
 
 std::string User::getOutputBuffer() const {
-    return outputBuffer;
+    return _outputBuffer;
 }
 
 void User::setOutputBuffer(const std::string& outputBuffer) {
-    this->outputBuffer = outputBuffer;
+    this->_outputBuffer = outputBuffer;
 }
 
 void User::appendToInputBuffer(const std::string& data) {
     Logger::debug("Appending to input buffer of user on socket " + numberToString(_fd) + ": " + data);
-    inputBuffer += data;
+    _inputBuffer += data;
 }
 
 std::vector<std::string> User::extractCompleteMessages() {
     std::vector<std::string> messages;
     size_t pos;
-    while ((pos = inputBuffer.find("\r\n")) != std::string::npos) {
-        messages.push_back(inputBuffer.substr(0, pos));
-        inputBuffer.erase(0, pos + 2);
+    while ((pos = _inputBuffer.find("\n")) != std::string::npos) {
+        messages.push_back(_inputBuffer.substr(0, pos));
+        _inputBuffer.erase(0, pos + 1);
     }
     return messages;
 }
 
 void User::appendToOutputBuffer(const std::string& data) {
-    outputBuffer += data;
+    _outputBuffer += data;
 }
 
 bool User::hasPendingOutput() const {
-    return !outputBuffer.empty();
+    return !_outputBuffer.empty();
 }
 
 bool User::getToDelete() const {
-    return toDelete;
+    return _toDelete;
 }
 
 void User::setToDelete(bool toDelete) {
-    this->toDelete = toDelete;
+    this->_toDelete = toDelete;
 }
 
 void User::registerUser() {
@@ -106,4 +109,11 @@ void User::registerUser() {
     }
 }
 
+void User::setHasValidPassword(bool hasValidPassword) {
+    Logger::debug("Setting hasValidPassword for user");
+    this->_hasValidPassword = hasValidPassword;
+}
 
+bool User::getHasValidPassword() const {
+    return this->_hasValidPassword;
+}

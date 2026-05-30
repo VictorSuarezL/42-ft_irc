@@ -19,6 +19,7 @@ class Server
         std::map<int, User> _users;
 
         bool parsePort(const std::string &port);
+        bool parsePassword(const std::string &password);
         void acceptClient(void);
         void receiveFromClient(size_t index);
 
@@ -27,10 +28,11 @@ class Server
         ~Server();
         void createSocket();
         void run(void);
-        void dispatchMessage(const Message& msg);
-        void handlePass(const Message& msg);
-        void handleNick(const Message& msg);
-        void handleUser(const Message& msg);
+        void dispatchMessage(User& user, const Message& msg);
+        void sendToUser(User &user, const std::string &message);
+        void handlePass(User &user, const Message& msg);
+        void handleNick(User& user, const Message& msg);
+        void handleUser(User& user, const Message& msg);
         void handleJoin(const Message& msg);
         void handlePart(const Message& msg);
         void handlePing(const Message& msg);
