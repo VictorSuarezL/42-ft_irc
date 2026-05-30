@@ -18,6 +18,7 @@ class Server
         std::map<int, User> _users;
 
         bool parsePort(const std::string &port);
+        bool parsePassword(const std::string &password);
         void acceptClient(void);
         void receiveFromClient(size_t index);
 

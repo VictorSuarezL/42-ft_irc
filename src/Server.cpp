@@ -17,11 +17,26 @@ bool Server::parsePort(const std::string &portStr)
     return !invalidPort;
 }
 
+bool Server::parsePassword(const std::string &password) {
+    // Alphanumeric passwords only
+    for (size_t i = 0; i < password.size(); ++i) {
+        if (!std::isalnum(password[i])) {
+            Logger::error("Invalid password: " + password + ". Password must be alphanumeric.");
+            return false;
+        }
+    }
+    return true;
+}
+
 Server::Server(const std::string &port, const std::string &password) : _port(0), _password(password), _serverName("definitely_not_discord")
 {
     if (!parsePort(port))
     {
         Logger::error("Invalid port: " + port);
+        exit(EXIT_FAILURE);
+    }
+    if (!parsePassword(password)) {
+        Logger::error("Invalid password: " + password);
         exit(EXIT_FAILURE);
     }
     createSocket();
