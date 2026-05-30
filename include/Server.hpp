@@ -5,6 +5,7 @@
 #include <poll.h>
 #include <User.hpp>
 #include <Message.hpp>
+#include <Errors.hpp>
 
 class Server
 {

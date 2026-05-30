@@ -41,20 +41,20 @@
 //     return 0;
 // }
 
-int main() {
-    // Chema && Sara testing purposes
-    std::string input;
-    Server server("6667", "password");
-    while (true) {
-        std::cout << "Enter a raw IRC message: ";
-        std::getline(std::cin, input);
-        Message msg;
-        msg = msg.parse(input);
-        msg.printMessage();
-        server.dispatchMessage(msg);
-    }
-    return 0;
-}
+// int main() {
+//     // Chema && Sara testing purposes
+//     std::string input;
+//     Server server("6667", "password");
+//     while (true) {
+//         std::cout << "Enter a raw IRC message: ";
+//         std::getline(std::cin, input);
+//         Message msg;
+//         msg = msg.parse(input);
+//         msg.printMessage();
+//         server.dispatchMessage(msg);
+//     }
+//     return 0;
+// }
 
 // int main()
 // {
@@ -197,3 +197,9 @@ int main() {
 
 //     return 0;
 // }
+
+int main() {
+    std::pair<int, std::string> error = getErrorMessage("ERR_NOTREGISTERED");
+    std::cout << "Error code " << error.first << std::endl;
+    std::cout << "Error message " << error.second << std::endl;
+}
