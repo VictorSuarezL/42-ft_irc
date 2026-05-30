@@ -1,3 +1,6 @@
+#ifndef USER_HPP
+#define USER_HPP
+
 #include <string>
 #include <vector>
 class User {
@@ -37,3 +40,5 @@ class User {
         std::string _outputBuffer;
         bool _toDelete;
 };
+
+#endif

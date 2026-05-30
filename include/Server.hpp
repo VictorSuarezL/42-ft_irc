@@ -5,6 +5,10 @@
 #include <poll.h>
 #include <User.hpp>
 #include <Message.hpp>
+#include <Errors.hpp>
+#include <Logger.hpp>
+#include <iostream>
+#include <Channel.hpp>
 
 class Server
 {
@@ -41,6 +45,7 @@ class Server
         void handleTopic(const Message& msg);
         void handlePrivMsg(const Message& msg);
         void handleUnknown(const Message& msg);
+        void errorBuilder(User& user, const std::string& errorCode);
 
         // int checkConnections(void);
         

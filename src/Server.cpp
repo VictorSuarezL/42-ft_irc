@@ -193,6 +193,7 @@ void Server::handlePass(User& user, const Message& msg) {
     {
         Logger::warning("PASS command received with insufficient arguments.");
         // Send an error message back to the user here
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
         return;
     }
 
@@ -202,7 +203,7 @@ void Server::handlePass(User& user, const Message& msg) {
     {
         Logger::warning("User on socket " + numberToString(user.getFd()) + " provided an invalid password.");
         // Send an error message back to the user here
-        sendToUser(user, ":" + _serverName + " 464 * :Password incorrect");
+        errorBuilder(user, "ERR_PASSWDMISMATCH");
         return;
     }
     user.setHasValidPassword(true);
@@ -332,4 +333,13 @@ void Server::sendToUser(User &user, const std::string &message)
 {
     std::string response = message + "\r\n";
     send(user.getFd(), response.c_str(), response.size(), 0);
+}
+
+void Server::errorBuilder(User& user, const std::string& errorCode) {
+    std::pair<int, std::string> errorMessage = getErrorMessage(errorCode);
+    int errorCodeInt = errorMessage.first;
+    const std::string& errorMessageStr = errorMessage.second;
+    // :<server_name> <error_code> <nickname> :<error_message>
+    std::string response = ":" + _serverName + " " + numberToString(errorCodeInt) + " " + user.getNickname() + " " + errorMessageStr;
+    sendToUser(user, response);
 }
