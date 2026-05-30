@@ -7,11 +7,13 @@ bool Server::parsePort(const std::string &portStr)
     char extra;
     bool invalidPort = false;
 
+    // Try to parse the port number
+
     if (!(stream >> _port))
         invalidPort = true;
     else if (stream >> extra)
         invalidPort = true;
-    else if (_port <= 0 || _port > 65535)
+    else if (_port < 1024 || _port > 65535)
         invalidPort = true;
 
     return !invalidPort;
