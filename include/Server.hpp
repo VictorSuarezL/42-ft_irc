@@ -20,6 +20,7 @@ class Server
         std::string _serverName;
         std::vector<pollfd> _fds; // List of file descriptors to monitor for incoming connections
         std::map<int, User> _users;
+        volatile static bool _serverStop;
         std::map<std::string, Channel> _channels;
 
         bool parsePort(const std::string &port);
@@ -48,6 +49,10 @@ class Server
         void handleUnknown(const Message& msg);
         void errorBuilder(User& user, const std::string& errorCode);
         bool isNicknameInUse(const std::string& nickname) const;
+        static void signalHandler(int signal);
+        static void setServerStop(bool value);
+        static bool getServerStop();
+        void serverShutdown();
 
         // int checkConnections(void);
         

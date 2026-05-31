@@ -9,7 +9,10 @@ int main(int argc, char *argv[])
     }
 
     Server server(argv[1], argv[2]);
-    while (true)
+    signal(SIGINT, server.signalHandler);
+    while (!server.getServerStop()) {
         server.run();
+    }
+    server.serverShutdown();
     return 0;
 }

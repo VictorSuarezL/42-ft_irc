@@ -19,6 +19,7 @@
 # include <unistd.h>
 # include <fcntl.h>
 # include <map>
+# include <signal.h>
 # include <set>
 
 const std::string PASS_STR = "pass";
