@@ -26,6 +26,7 @@ void initErrorMessages()
     errorMessages["ERR_BADCHANNELKEY"] = std::make_pair(475, ":Cannot join channel (+k)");
     errorMessages["ERR_BADCHANMASK"] = std::make_pair(476, ":Bad Channel Mask");
     errorMessages["ERR_CHANOPRIVSNEEDED"] = std::make_pair(482, ":You're not channel operator");
+    errorMessages["ERR_SERVERSHUTDOWN"] = std::make_pair(666, ":Servers shutting down");
 }
 
 std::pair<int, std::string> getErrorMessage(const std::string& errorCode)

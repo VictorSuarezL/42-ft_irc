@@ -301,7 +301,7 @@ void Server::dispatchMessage(User& user, const Message& msg) {
     {
         Logger::warning("User on socket " + numberToString(user.getFd()) + " is not registered and sent command: " + cmd);
         // Send an error message back to the user here
-        sendToUser(user, ":" + _serverName + " 451 * :You have not registered");
+        errorBuilder(user, "ERR_NOTREGISTERED");
         return;
     }
     if (user.getHasValidPassword() && user.hasNickname() && user.hasUsername())
@@ -344,4 +344,42 @@ void Server::errorBuilder(User& user, const std::string& errorCode) {
     // :<server_name> <error_code> <nickname> :<error_message>
     std::string response = ":" + _serverName + " " + numberToString(errorCodeInt) + " " + user.getNickname() + " " + errorMessageStr;
     sendToUser(user, response);
+}
+
+bool Server::isNicknameInUse(const std::string& nickname) const {
+    // Find in _users map if any user has the same nickname
+    for (std::map<int, User>::const_iterator it = _users.begin(); it != _users.end(); ++it) {
+        if (it->second.getNickname() == nickname) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Server::signalHandler(int signal)
+{
+    if (signal == SIGINT)
+    {
+        // Clean ^C output by moving the cursor to the beginning of the line and clearing it
+        std::cout << "\r\033[K";
+        Server::setServerStop(true);
+    }
+}
+
+void Server::setServerStop(bool value) {
+    _serverStop = value;
+}
+
+bool Server::getServerStop() {
+    return _serverStop;
+}
+
+volatile bool Server::_serverStop = false;
+
+void Server::serverShutdown() {
+    // Send a message to all connected users about the server shutdown
+    for (std::map<int, User>::iterator it = _users.begin(); it != _users.end(); ++it) {
+        User& user = it->second;
+        errorBuilder(user, "ERR_SERVERSHUTDOWN");
+    }
 }
