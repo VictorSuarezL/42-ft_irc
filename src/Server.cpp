@@ -349,9 +349,138 @@ void Server::handlePing(User& user, const Message& msg) {
     }
 }
 
-void Server::handleMode(const Message& msg) {
+void Server::handleMode(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
     // Implement MODE command handling logic here
+    if (msg.getArgCount() < 1)
+    {
+        Logger::warning("MODE command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        return;
+    }
+    if (msg.getArgCount() == 1) {
+        // Show channel modes
+        std::string channelName = msg.getArgs()[0];
+        if (_channels.find(channelName) == _channels.end()) {
+            Logger::warning("MODE command received for non-existent channel: " + channelName);
+            errorBuilder(user, "ERR_NOSUCHCHANNEL");
+            return;
+        }
+        Channel& channel = _channels[channelName];
+        std::string modeString = "+";
+        if (channel.isInviteOnly())
+            modeString += "i";
+        if (channel.isTopicRestricted())
+            modeString += "t";
+        if (!channel.getChannelKey().empty())
+            modeString += "k";
+        if (channel.getUserLimit() > 0)
+            modeString += "l";
+        std::string response = ":" + _serverName + " MODE " + channelName + " :" + modeString;
+        sendToUser(user, response);
+        return;    
+    }
+    std::vector<std::string> args = msg.getArgs();
+    std::string target = args[0];
+    // Check if the target is a channel
+    if (target[0] == '#') {
+        // Validate channel exists
+        if (_channels.find(target) == _channels.end()) {
+            Logger::warning("MODE command received for non-existent channel: " + target);
+            errorBuilder(user, "ERR_NOSUCHCHANNEL");
+            return;
+        }
+        Channel& channel = _channels[target];
+        std::string modeChanges = args[1];
+        // Process mode changes ONLY i, t, k, o, l for now
+        for (size_t i = 0; i < modeChanges.size(); ++i)
+        {            
+            char mode = modeChanges[i];
+            bool adding = true;
+            if (mode == '+') {
+                adding = true;
+                continue;
+            } else if (mode == '-') {
+                adding = false;
+                continue;
+            }
+            switch (mode) {
+                case 'i':
+                    channel.setInviteOnly(adding);
+                    break;
+                case 't':
+                    channel.setTopicRestricted(adding);
+                    break;
+                case 'k':
+                    if (adding) {
+                        if (args.size() < 3) {
+                            Logger::warning("MODE command received with insufficient arguments for +k mode.");
+                            errorBuilder(user, "ERR_NEEDMOREPARAMS");
+                        }
+                        channel.setChannelKey(args[2]);
+                    } else {
+                        channel.setChannelKey("");
+                    }
+                    break;
+                case 'o': {
+                    if (args.size() < 3) {
+                        Logger::warning("MODE command received with insufficient arguments for +o/-o mode.");
+                        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+                    }
+                    // Find the user by nickname
+                    std::string targetNickname = args[2];
+                    int targetFd = -1;
+                    for (std::map<int, User>::iterator it = _users.begin(); it != _users.end(); ++it) {
+                        if (it->second.getNickname() == targetNickname) {
+                            targetFd = it->first;
+                            break;
+                        }
+                    }
+                    if (targetFd == -1) {
+                        Logger::warning("MODE command received with non-existent user: " + targetNickname);
+                        errorBuilder(user, "ERR_NOSUCHNICK");
+                    }
+                    if (adding) {
+                        channel.addOperator(targetFd);
+                    } else {
+                        channel.removeOperator(_users[targetFd]);
+                    }
+                    break;
+                }
+                case 'l': {
+                    if (adding) {
+                        if (args.size() < 3) {
+                            Logger::warning("MODE command received with insufficient arguments for +l mode.");
+                            errorBuilder(user, "ERR_NEEDMOREPARAMS");
+                            return;
+                        }
+                        int userLimit = std::atoi(args[2].c_str());
+                        if (userLimit <= 0) {
+                            Logger::warning("MODE command received with invalid user limit: " + args[2]);
+                            errorBuilder(user, "ERR_INVALIDMODEPARAM");
+                            return;
+                        }
+                        channel.setUserLimit(userLimit);
+                    } else {
+                        channel.setUserLimit(0);
+                    }
+                    break;
+                }
+            default:
+                Logger::warning("MODE command received with unknown mode: " + std::string(1, mode));
+                errorBuilder(user, "ERR_UMODEUNKNOWNFLAG");
+                return;
+            }
+        }
+
+    } else {
+        // Handle user mode changes (not implemented in this version)
+        Logger::warning("User mode changes are not supported yet.");
+        errorBuilder(user, "ERR_UMODEUNKNOWNFLAG");
+        return;
+    }
+
+
 }
 
 void Server::handleKick(const Message& msg) {
@@ -425,7 +554,7 @@ void Server::dispatchMessage(User& user, const Message& msg) {
         else if (cmd == PING_STR)
             handlePing(user, msg);
         else if (cmd == MODE_STR)
-            handleMode(msg);
+            handleMode(user, msg);
         else if (cmd == KICK_STR)
             handleKick(msg);
         else if (cmd == INVITE_STR)
