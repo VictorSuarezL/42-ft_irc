@@ -292,7 +292,7 @@ void Server::handleJoin(User& user, const Message& msg) {
 
     if(!channel.addUser(user.getFd()))
     {
-        Logger::warning("Failed to add user " + user.getNickname() + " to channel " + channelName);
+        Logger::warning("Failed to add user " + user.getNickname() + " to channel " + channelName + " because the channel is full.");
         errorBuilder(user, "ERR_CHANNELISFULL");
         return;
     }
