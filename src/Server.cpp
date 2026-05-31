@@ -306,9 +306,27 @@ void Server::handlePart(const Message& msg) {
     // Implement PART command handling logic here
 }
 
-void Server::handlePing(const Message& msg) {
+void Server::handlePing(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
     // Implement PING command handling logic here
+    if ((msg.getArgCount() + (msg.getTrailing().empty() ? 0 : 1)) < 1)
+    {
+        Logger::warning("PING command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        return;
+    }
+    if (msg.getTrailing().empty())
+    {
+        std::string pongResponse = msg.getArgsAsString();
+        std::string response = "PONG :" + pongResponse;
+        sendToUser(user, response);
+        return;
+    } else {
+        std::string pongResponse = msg.getArgsAsString() + " " + msg.getTrailing();
+        std::string response = "PONG :" + pongResponse;
+        sendToUser(user, response);
+        return;
+    }
 }
 
 void Server::handleMode(const Message& msg) {
@@ -361,7 +379,6 @@ void Server::dispatchMessage(User& user, const Message& msg) {
     //     sendToUser(user, ":" + _serverName + " 451 * :You have not registered");
     //     return;
     // }
-    
     if (cmd == PASS_STR && !user.getHasValidPassword() && !user.isRegistered())
         handlePass(user, msg);
     else if (cmd == NICK_STR)
@@ -386,7 +403,7 @@ void Server::dispatchMessage(User& user, const Message& msg) {
         else if (cmd == PART_STR)
             handlePart(msg);
         else if (cmd == PING_STR)
-            handlePing(msg);
+            handlePing(user, msg);
         else if (cmd == MODE_STR)
             handleMode(msg);
         else if (cmd == KICK_STR)
