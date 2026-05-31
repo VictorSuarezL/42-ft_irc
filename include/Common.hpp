@@ -19,6 +19,7 @@
 # include <unistd.h>
 # include <fcntl.h>
 # include <map>
+# include <set>
 
 const std::string PASS_STR = "pass";
 const std::string NICK_STR = "nick";
