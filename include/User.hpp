@@ -1,8 +1,11 @@
 #ifndef USER_HPP
 #define USER_HPP
 
+#include <Common.hpp>
+#include <Logger.hpp>
 #include <string>
 #include <vector>
+
 class User {
     public:
         User();
