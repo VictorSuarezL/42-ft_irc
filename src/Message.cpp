@@ -27,6 +27,17 @@ void Message::addArg(const std::string& arg) {
 std::vector<std::string> Message::getArgs() const {
     return args;
 }
+
+std::string Message::getArgsAsString() const {
+    std::string result;
+    for (size_t i = 0; i < args.size(); ++i) {
+        result += args[i];
+        if (i < args.size() - 1)
+            result += " ";
+    }
+    return result;
+}
+
 int Message::getArgCount() const {
     return args.size();
 }

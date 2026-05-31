@@ -13,6 +13,7 @@ class Message {
         std::string getTrailing() const;
         void addArg(const std::string& arg);
         std::vector<std::string> getArgs() const;
+        std::string getArgsAsString() const;
         int getArgCount() const;
         void printMessage() const;
         Message parse(const std::string& raw);
