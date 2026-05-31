@@ -194,7 +194,6 @@ void Server::handlePass(User& user, const Message& msg) {
     if (msg.getArgCount() < 1)
     {
         Logger::warning("PASS command received with insufficient arguments.");
-        // Send an error message back to the user here
         errorBuilder(user, "ERR_NEEDMOREPARAMS");
         return;
     }
@@ -214,14 +213,35 @@ void Server::handlePass(User& user, const Message& msg) {
 void Server::handleNick(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
     // Implement NICK command handling logic here
+    if (msg.getArgCount() < 1)
+    {
+        Logger::warning("NICK command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        return;
+    }
     std::string nickname = msg.getArgs()[0];
-    Logger::debug("Received nickname: " + nickname + " for user on socket " + numberToString(user.getFd()));
-    user.setNickname(nickname);
+    // Check if the nickname is already in use
+    if (isNicknameInUse(nickname)) {
+        Logger::warning("NICK command received with a nickname that is already in use: " + nickname);
+        errorBuilder(user, "ERR_NICKNAMEINUSE");
+        return;
+    } else {
+        Logger::debug("Received nickname: " + nickname + " for user on socket " + numberToString(user.getFd()));
+        user.setNickname(nickname);
+    }
 }
 
 void Server::handleUser(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand() + " for user on socket " + numberToString(user.getFd()));
     // Implement USER command handling logic here
+    if (msg.getArgCount() < 1)
+    {
+        Logger::warning("USER command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        return;
+    }
+    std::string username = msg.getArgs()[0];
+    Logger::debug("Received username: " + msg.getArgs()[0] + " for user on socket " + numberToString(user.getFd()));
     user.setUsername(msg.getArgs()[0]);
 }
 
@@ -432,4 +452,14 @@ void Server::errorBuilder(User& user, const std::string& errorCode) {
     // :<server_name> <error_code> <nickname> :<error_message>
     std::string response = ":" + _serverName + " " + numberToString(errorCodeInt) + " " + user.getNickname() + " " + errorMessageStr;
     sendToUser(user, response);
+}
+
+bool Server::isNicknameInUse(const std::string& nickname) const {
+    // Find in _users map if any user has the same nickname
+    for (std::map<int, User>::const_iterator it = _users.begin(); it != _users.end(); ++it) {
+        if (it->second.getNickname() == nickname) {
+            return true;
+        }
+    }
+    return false;
 }

@@ -47,6 +47,7 @@ class Server
         void handlePrivMsg(const Message& msg);
         void handleUnknown(const Message& msg);
         void errorBuilder(User& user, const std::string& errorCode);
+        bool isNicknameInUse(const std::string& nickname) const;
 
         // int checkConnections(void);
         

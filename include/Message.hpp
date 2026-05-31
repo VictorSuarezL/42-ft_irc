@@ -1,3 +1,6 @@
+#ifndef MESSAGE_HPP
+#define MESSAGE_HPP
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -22,3 +25,5 @@ class Message {
         std::vector<std::string> args;
         std::string trailing;
 };
+
+#endif
