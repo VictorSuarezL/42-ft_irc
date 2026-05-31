@@ -225,9 +225,80 @@ void Server::handleUser(User& user, const Message& msg) {
     user.setUsername(msg.getArgs()[0]);
 }
 
-void Server::handleJoin(const Message& msg) {
+void Server::handleJoin(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
+    if (msg.getArgCount() < 1)
+    {
+        Logger::warning("JOIN command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        return;
+    }
     // Implement JOIN command handling logic here
+    std::string channelName = msg.getArgs()[0];
+
+    // Check if the channel name is valid (e.g., starts with #)
+    if (channelName.empty() 
+        || channelName[0] != '#' 
+        || (channelName.find(' ') != std::string::npos) 
+        || channelName.size() < 2
+        || channelName.find(',') != std::string::npos
+        || channelName.find('\r') != std::string::npos
+        || channelName.find('\n') != std::string::npos)
+    {
+        Logger::warning("Invalid channel name: " + channelName);
+        errorBuilder(user, "ERR_BADCHANMASK");
+        return;
+        
+    } else if (_channels.find(channelName) == _channels.end()) {
+        // Channel does not exist, create it
+        Channel newChannel;
+        newChannel.setName(channelName);
+        _channels[channelName] = newChannel;
+        Channel& channel = _channels[channelName];
+        Logger::info("Channel " + channelName + " created.");
+        // Add the user to the channel
+        if(!channel.addUser(user.getFd()))
+        {
+            Logger::warning("Failed to add user " + user.getNickname() + " to channel " + channelName);
+            errorBuilder(user, "ERR_CHANNELISFULL");
+            return;
+        }
+        Logger::info("User " + user.getNickname() + " joined channel " + channelName + ".");
+        // Make the user an operator in the channel
+        if(!channel.addOperator(user.getFd()))
+        {
+            Logger::warning("Failed to add user " + user.getNickname() + " as operator to channel " + channelName);
+            errorBuilder(user, "ERR_CHANNELISFULL");
+            return;
+        }
+        Logger::info("User " + user.getNickname() + " is now an operator in channel " + channelName);
+        return;
+    }
+
+    Channel &channel = _channels[channelName];
+    if (channel.isInviteOnly() && !channel.isInvited(user.getFd()))
+    {
+        Logger::warning("User " + user.getNickname() + " is not invited to join channel " + channelName);
+        errorBuilder(user, "ERR_INVITEONLYCHAN");
+        return;
+    }
+
+    if(!channel.getChannelKey().empty() && channel.getChannelKey() != msg.getArgs()[1])
+    {
+        Logger::warning("User " + user.getNickname() + " provided incorrect channel key for channel " + channelName);
+        errorBuilder(user, "ERR_BADCHANNELKEY");
+        return;
+    }
+
+    if(!channel.addUser(user.getFd()))
+    {
+        Logger::warning("Failed to add user " + user.getNickname() + " to channel " + channelName);
+        errorBuilder(user, "ERR_CHANNELISFULL");
+        return;
+    }
+    Logger::info("User " + user.getNickname() + " joined channel " + channelName);
+
+    return;
 }
 
 void Server::handlePart(const Message& msg) {
@@ -311,7 +382,7 @@ void Server::dispatchMessage(User& user, const Message& msg) {
     if(user.isRegistered())
     {
         if (cmd == JOIN_STR)
-            handleJoin(msg);
+            handleJoin(user, msg);
         else if (cmd == PART_STR)
             handlePart(msg);
         else if (cmd == PING_STR)
