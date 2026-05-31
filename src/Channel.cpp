@@ -3,8 +3,6 @@
 Channel::Channel(){
     _name = "";
     _topic = "";
-    _users = std::map<int, User>();
-    _operators = std::map<int, User>();
     _inviteOnly = false;
     _topicRestricted = false;
     _channelKey = "";
@@ -29,19 +27,18 @@ std::string Channel::getTopic() const {
     return _topic;
 }
 
-void Channel::addUser(const User& user) {
-    if (!isFull()) {
-        _users[user.getFd()] = user;
-    } else {
-       Logger::info("Cannot add user " + user.getNickname() + " to channel " + _name + ": channel is full.");
-    }
+bool Channel::addUser(int userFd) {
+    if (isFull())
+        return false;
+    _users.insert(userFd);
+    return true;
 }
 
 void Channel::removeUser(const User& user) {
     _users.erase(user.getFd());
 }
 
-std::map<int, User> Channel::getUsers() const {
+std::set<int> Channel::getUsers() const {
     return _users;
 }
 
@@ -49,15 +46,22 @@ int Channel::getUserCount() const {
     return _users.size();
 }
 
-void Channel::addOperator(const User& user) {
-    _operators[user.getFd()] = user;
+bool Channel::hasUser(int userFd) const {
+    return _users.find(userFd) != _users.end();
+}
+
+bool Channel::addOperator(int userFd) {
+        if (!hasUser(userFd))
+        return false;
+    _operators.insert(userFd);
+    return true;
 }
 
 void Channel::removeOperator(const User& user) {
     _operators.erase(user.getFd());
 }
 
-std::map<int, User> Channel::getOperators() const {
+std::set<int> Channel::getOperators() const {
     return _operators;
 }
 
@@ -66,18 +70,18 @@ int Channel::getOperatorCount() const {
 }
 
 void Channel::inviteUser(const User& user) {
-    _invitedUsers[user.getFd()] = user;
+    _invitedUsers.insert(user.getFd());
 }
 
 void Channel::removeInvite(const User& user) {
     _invitedUsers.erase(user.getFd());
 }
 
-bool Channel::isInvited(const User& user) const {
-    return _invitedUsers.find(user.getFd()) != _invitedUsers.end();
+bool Channel::isInvited(int userFd) const {
+    return _invitedUsers.find(userFd) != _invitedUsers.end();
 }
 
-std::map<int, User> Channel::getInvitedUsers() const {
+std::set<int> Channel::getInvitedUsers() const {
     return _invitedUsers;
 }
 
@@ -130,13 +134,13 @@ void Channel::printChannelInfo() const {
     std::cout << "Channel Name: " << _name << std::endl;
     std::cout << "Topic: " << _topic << std::endl;
     std::cout << "Users (" << getUserCount() << "): ";
-    for (std::map<int, User>::const_iterator it = _users.begin(); it != _users.end(); ++it) {
-        std::cout << it->second.getNickname() << " ";
+    for (std::set<int>::const_iterator it = _users.begin(); it != _users.end(); ++it) {
+        std::cout << "User with FD: " << *it << " ";
     }
     std::cout << std::endl;
     std::cout << "Operators (" << getOperatorCount() << "): ";
-    for (std::map<int, User>::const_iterator it = _operators.begin(); it != _operators.end(); ++it) {
-        std::cout << it->second.getNickname() << " ";
+    for (std::set<int>::const_iterator it = _operators.begin(); it != _operators.end(); ++it) {
+        std::cout << "Operator with FD: " << *it << " ";
     }
     std::cout << "Invite Only: " << (_inviteOnly ? "Yes" : "No") << std::endl;
     std::cout << "Topic Restricted: " << (_topicRestricted ? "Yes" : "No") << std::endl;

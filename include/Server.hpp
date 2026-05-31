@@ -21,6 +21,7 @@ class Server
         std::vector<pollfd> _fds; // List of file descriptors to monitor for incoming connections
         std::map<int, User> _users;
         volatile static bool _serverStop;
+        std::map<std::string, Channel> _channels;
 
         bool parsePort(const std::string &port);
         bool parsePassword(const std::string &password);
@@ -37,9 +38,9 @@ class Server
         void handlePass(User &user, const Message& msg);
         void handleNick(User& user, const Message& msg);
         void handleUser(User& user, const Message& msg);
-        void handleJoin(const Message& msg);
+        void handleJoin(User& user, const Message& msg);
         void handlePart(const Message& msg);
-        void handlePing(const Message& msg);
+        void handlePing(User& user, const Message& msg);
         void handleMode(const Message& msg);
         void handleKick(const Message& msg);
         void handleInvite(const Message& msg);

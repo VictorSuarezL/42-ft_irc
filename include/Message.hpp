@@ -1,3 +1,6 @@
+#ifndef MESSAGE_HPP
+#define MESSAGE_HPP
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -13,6 +16,7 @@ class Message {
         std::string getTrailing() const;
         void addArg(const std::string& arg);
         std::vector<std::string> getArgs() const;
+        std::string getArgsAsString() const;
         int getArgCount() const;
         void printMessage() const;
         Message parse(const std::string& raw);
@@ -21,3 +25,5 @@ class Message {
         std::vector<std::string> args;
         std::string trailing;
 };
+
+#endif

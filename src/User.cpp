@@ -1,5 +1,4 @@
-#include <User.hpp>
-#include <Logger.hpp>
+# include <User.hpp>
 
 User::User() {
     _fd = -1;

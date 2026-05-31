@@ -20,6 +20,7 @@
 # include <fcntl.h>
 # include <map>
 # include <signal.h>
+# include <set>
 
 const std::string PASS_STR = "pass";
 const std::string NICK_STR = "nick";
