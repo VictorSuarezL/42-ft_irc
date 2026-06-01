@@ -34,7 +34,7 @@ class Server
         void createSocket();
         void run(void);
         void dispatchMessage(User& user, const Message& msg);
-        void sendToUser(User &user, const std::string &message);
+        void sendToUser(const User &user, const std::string &message);
         void handlePass(User &user, const Message& msg);
         void handleNick(User& user, const Message& msg);
         void handleUser(User& user, const Message& msg);
@@ -45,7 +45,7 @@ class Server
         void handleKick(const Message& msg);
         void handleInvite(const Message& msg);
         void handleTopic(const Message& msg);
-        void handlePrivMsg(const Message& msg);
+        void handlePrivMsg(User& user, const Message& msg);
         void handleUnknown(const Message& msg);
         void errorBuilder(User& user, const std::string& errorCode);
         bool isNicknameInUse(const std::string& nickname) const;
@@ -53,6 +53,9 @@ class Server
         static void setServerStop(bool value);
         static bool getServerStop();
         void serverShutdown();
+        void broadcastMessage(const std::string& message, int senderFd, const std::string& channelName);
+        const User *getUserByNickname(const std::string& nickname) const;
+
 
         // int checkConnections(void);
         

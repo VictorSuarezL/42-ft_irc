@@ -498,9 +498,62 @@ void Server::handleTopic(const Message& msg) {
     // Implement TOPIC command handling logic here
 }
 
-void Server::handlePrivMsg(const Message& msg) {
+void Server::handlePrivMsg(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
     // Implement PRIVMSG command handling logic here
+    if (msg.getArgCount() < 1)
+    {
+        Logger::warning("PRIVMSG command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        return;
+    }
+    std::string target = msg.getArgs()[0];
+    std::string message = msg.getTrailing();
+
+    // msg.printMessage();
+
+    if(target[0] == '#')
+    {
+        // Message to a channel
+        if(_channels.find(target) == _channels.end())
+        {
+            Logger::warning("PRIVMSG command received for non-existent channel: " + target);
+            errorBuilder(user, "ERR_NOSUCHCHANNEL");
+            return;
+        }
+        Channel& channel = _channels[target];
+        if (!channel.hasUser(user.getFd()))
+        {
+            Logger::warning("User " + user.getNickname() + " is not in channel " + target + " and cannot send messages to it.");
+            errorBuilder(user, "ERR_CANNOTSENDTOCHAN");
+            return;
+        }
+        if(channel.isModerated() && !channel.isOperator(user.getFd()))
+        {
+            Logger::warning("User " + user.getNickname() + " is not an operator in moderated channel " + target + " and cannot send messages to it.");
+            errorBuilder(user, "ERR_CANNOTSENDTOCHAN");
+            return;
+        }
+        std::string formattedMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " PRIVMSG " + target + " :" + message;
+        broadcastMessage(formattedMessage, user.getFd(), target);
+    } else {
+        // Private message to a user
+        if(!isNicknameInUse(target))
+        {
+            Logger::warning("PRIVMSG command received for non-existent user: " + target);
+            errorBuilder(user, "ERR_NOSUCHNICK");
+            return;
+        }
+        std::string formattedMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " PRIVMSG " + target + " :" + message;
+        const User* targetUser = getUserByNickname(target);
+        if(targetUser == NULL)
+        {
+            Logger::warning("PRIVMSG command received for non-existent user: " + target);
+            errorBuilder(user, "ERR_NOSUCHNICK");
+            return;
+        }
+        sendToUser(*targetUser, formattedMessage);
+    }
 }
 
 void Server::handleUnknown(const Message& msg) {
@@ -562,13 +615,13 @@ void Server::dispatchMessage(User& user, const Message& msg) {
         else if (cmd == TOPIC_STR)
             handleTopic(msg);
         else if (cmd == PRIVMSG_STR)
-            handlePrivMsg(msg);
+            handlePrivMsg(user, msg);
         else
             handleUnknown(msg);
     }
 }
 
-void Server::sendToUser(User &user, const std::string &message)
+void Server::sendToUser(const User &user, const std::string &message)
 {
     std::string response = message + "\r\n";
     send(user.getFd(), response.c_str(), response.size(), 0);
@@ -619,4 +672,26 @@ void Server::serverShutdown() {
         User& user = it->second;
         errorBuilder(user, "ERR_SERVERSHUTDOWN");
     }
+}
+
+void Server::broadcastMessage(const std::string& message, int senderFd, const std::string& channelName) {
+
+    Channel& channel = _channels[channelName];
+    std::set<int> users = channel.getUsers();
+
+    for (std::set<int>::iterator it = users.begin(); it != users.end(); ++it) {
+        if (*it != senderFd) {
+            sendToUser(_users[*it], message);
+        }
+    }
+}
+
+const User *Server::getUserByNickname(const std::string &nickname) const
+{
+    for (std::map<int, User>::const_iterator it = _users.begin(); it != _users.end(); ++it)
+    {
+        if (it->second.getNickname() == nickname)
+            return &(it->second);
+    }
+    return NULL;
 }
