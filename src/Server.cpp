@@ -246,6 +246,7 @@ void Server::handleUser(User& user, const Message& msg) {
 }
 
 void Server::handleJoin(User& user, const Message& msg) {
+    bool wasCreated = false;
     Logger::info("Handling command " + msg.getCommand());
     if (msg.getArgCount() < 1)
     {
@@ -269,33 +270,25 @@ void Server::handleJoin(User& user, const Message& msg) {
         errorBuilder(user, "ERR_BADCHANMASK");
         return;
         
-    } else if (_channels.find(channelName) == _channels.end()) {
+    } 
+    if (_channels.find(channelName) == _channels.end()) {
         // Channel does not exist, create it
+        wasCreated = true;
         Channel newChannel;
         newChannel.setName(channelName);
         _channels[channelName] = newChannel;
-        Channel& channel = _channels[channelName];
         Logger::info("Channel " + channelName + " created.");
-        // Add the user to the channel
-        if(!channel.addUser(user.getFd()))
-        {
-            Logger::warning("Failed to add user " + user.getNickname() + " to channel " + channelName);
-            errorBuilder(user, "ERR_CHANNELISFULL");
-            return;
-        }
-        Logger::info("User " + user.getNickname() + " joined channel " + channelName + ".");
-        // Make the user an operator in the channel
-        if(!channel.addOperator(user.getFd()))
-        {
-            Logger::warning("Failed to add user " + user.getNickname() + " as operator to channel " + channelName);
-            errorBuilder(user, "ERR_CHANNELISFULL");
-            return;
-        }
-        Logger::info("User " + user.getNickname() + " is now an operator in channel " + channelName);
+    } 
+    
+    Channel &channel = _channels[channelName];
+
+    if(channel.hasUser(user.getFd()))
+    {
+        Logger::warning("User " + user.getNickname() + " is already in channel " + channelName);
+        errorBuilder(user, "ERR_USERONCHANNEL");
         return;
     }
 
-    Channel &channel = _channels[channelName];
     if (channel.isInviteOnly() && !channel.isInvited(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not invited to join channel " + channelName);
@@ -317,6 +310,50 @@ void Server::handleJoin(User& user, const Message& msg) {
         return;
     }
     Logger::info("User " + user.getNickname() + " joined channel " + channelName);
+
+    // Send a JOIN message to the user
+    std::string joinResponseMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " JOIN " + channelName;
+    sendToUser(user, joinResponseMessage);
+
+    // Broadcast the JOIN message to all users in the channel
+    std::string joinToChannelMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " JOIN " + channelName;
+    broadcastMessage(joinToChannelMessage, user.getFd(), channelName);
+    
+    // Send the topic of the channel to the user (TODO)
+
+    // Make user operator if they are the first user in the channel
+    if (wasCreated)
+    { 
+        if(!channel.addOperator(user.getFd()))
+        {
+        Logger::warning("Failed to add user " + user.getNickname() + " as operator to channel " + channelName);
+        errorBuilder(user, "ERR_CHANNELISFULL");
+        return;
+        }
+        Logger::info("User " + user.getNickname() + " is now an operator in channel " + channelName);
+    }
+
+    // Send the list of users in the channel to the user
+    std::set<int> usersInChannel = channel.getUsers();
+    std::string userList = "";
+    for (std::set<int>::iterator it = usersInChannel.begin(); it != usersInChannel.end(); ++it)
+    {
+        int userFd = *it;
+        if (_users.find(userFd) != _users.end())
+        {
+            User& channelUser = _users[userFd];
+            if(channel.isOperator(userFd))
+                userList += "@" + channelUser.getNickname() + " ";
+            else
+                userList += channelUser.getNickname() + " ";
+        }
+    }
+    std::string userListMessage = ":" + _serverName + " 353 " + user.getNickname() + " = " + channelName + " :" + userList;
+    sendToUser(user, userListMessage);
+
+    // Send End of NAMES list message to the user
+    std::string endOfNamesMessage = ":" + _serverName + " 366 " + user.getNickname() + " " + channelName + " :End of /NAMES list";
+    sendToUser(user, endOfNamesMessage);
 
     return;
 }
