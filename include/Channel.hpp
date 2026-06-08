@@ -36,7 +36,6 @@ class Channel
         int getUserLimit() const;
         void setUserLimit(int limit);
         bool isFull() const;
-        void broadcastMessage(const std::string& message, const User& sender);
         void printChannelInfo() const;
         bool hasUser(int userFd) const;
     private:

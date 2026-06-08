@@ -125,11 +125,6 @@ bool Channel::isFull() const {
     return _userLimit > 0 && _users.size() == static_cast<size_t>(_userLimit);
 }
 
-void Channel::broadcastMessage(const std::string& message, const User& sender) {
-    // Implementation for broadcasting a message to all users in the channel except the sender
-    std::cout << "Broadcasting message from " << sender.getNickname() << ": " << message << std::endl;
-}
-
 void Channel::printChannelInfo() const {
     std::cout << "Channel Name: " << _name << std::endl;
     std::cout << "Topic: " << _topic << std::endl;
