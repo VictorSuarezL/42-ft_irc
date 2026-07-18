@@ -1,7 +1,7 @@
 #include <Message.hpp>
 
 // Message constructor and destructor
-Message::Message() {}
+Message::Message() : trailingPresent(false) {}
 Message::~Message() {}
 
 // Setters and getters for command
@@ -15,9 +15,13 @@ std::string Message::getCommand() const {
 // Setters and getters for trailing
 void Message::setTrailing(const std::string& trail) {
     trailing = trail;
+    trailingPresent = true;
 }
 std::string Message::getTrailing() const {
     return trailing;
+}
+bool Message::hasTrailing() const {
+    return trailingPresent;
 }
 
 // Setters and getters for arguments

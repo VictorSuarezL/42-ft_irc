@@ -543,14 +543,13 @@ void Server::handleInvite(const Message& msg) {
 
 void Server::handleTopic(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    // Implement TOPIC command handling logic here
+    // Check if the number of arguments is sufficient
     if (msg.getArgCount() < 1) 
     {
         Logger::warning("TOPIC command received with insufficient arguments.");
         errorBuilder(user, "ERR_NEEDMOREPARAMS");
         return;
     }
-
     // Check if the channel exists
     std::string channelName = msg.getArgs()[0];
     if (_channels.find(channelName) == _channels.end()) 
@@ -574,20 +573,33 @@ void Server::handleTopic(User& user, const Message& msg) {
         errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
         return;
     }
-    // If the message has a trailing part, set the topic; otherwise, return the current topic
-    if (!msg.getTrailing().empty())
+    // If the message does not have a trailing part, return the current topic
+    if(!msg.hasTrailing())
     {
-        channel.setTopic(msg.getTrailing());
-        Logger::info("User " + user.getNickname() + " set the topic for channel " + channelName + " to: " + msg.getTrailing());
-        std::string topicSetMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " TOPIC " + channelName + " :" + msg.getTrailing();
-        broadcastMessage(topicSetMessage, user.getFd(), channelName);
-    } else {
-        // Return the current topic
-        std::string currentTopic = channel.getTopic();
-        std::string topicReplyMessage = ":" + _serverName + " 332 " + user.getNickname() + " " + channelName + " :" + currentTopic;
-        sendToUser(user, topicReplyMessage);
+        Logger::info("User " + user.getNickname() + " requested the current topic for channel " + channelName);
+        if(channel.getTopic().empty())
+        {
+            std::string noTopicMessage = ":" + _serverName + " 331 " + user.getNickname() + " " + channelName + " :No topic is set";
+            sendToUser(user, noTopicMessage);
+        }
+        else
+        {
+            std::string topicMessage = ":" + _serverName + " 332 " + user.getNickname() + " " + channelName + " :" + channel.getTopic();
+            sendToUser(user, topicMessage);
+        }
+    }
+    // If the message has a trailing part, set the topic; otherwise, return the current topic
+    if(channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
+    {
+        Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot set the topic.");
+        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+        return;
     }
 
+    channel.setTopic(msg.getTrailing());
+    Logger::info("User " + user.getNickname() + " set the topic for channel " + channelName + " to: " + msg.getTrailing());
+    std::string topicSetMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " TOPIC " + channelName + " :" + msg.getTrailing();
+    broadcastMessage(topicSetMessage, user.getFd(), channelName);
 }
 
 void Server::handlePrivMsg(User& user, const Message& msg) {
@@ -685,7 +697,7 @@ void Server::dispatchMessage(User& user, const Message& msg) {
         errorBuilder(user, "ERR_NOTREGISTERED");
         return;
     }
-    if (user.getHasValidPassword() && user.hasNickname() && user.hasUsername())
+    if (user.getHasValidPassword() && user.hasNickname() && user.hasUsername() && !user.isRegistered())
     {
         user.setIsRegistered(true);
     }
