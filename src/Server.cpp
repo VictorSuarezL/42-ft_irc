@@ -376,25 +376,22 @@ void Server::handlePart(const Message& msg) {
 
 void Server::handlePing(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    // Implement PING command handling logic here
     if ((msg.getArgCount() + (msg.getTrailing().empty() ? 0 : 1)) < 1)
     {
         Logger::warning("PING command received with insufficient arguments.");
         errorBuilder(user, "ERR_NEEDMOREPARAMS");
         return;
     }
-    if (msg.getTrailing().empty())
+
+    std::string pongResponse = msg.getArgsAsString();
+    if (!msg.getTrailing().empty())
     {
-        std::string pongResponse = msg.getArgsAsString();
-        std::string response = "PONG :" + pongResponse;
-        sendToUser(user, response);
-        return;
-    } else {
-        std::string pongResponse = msg.getArgsAsString() + " " + msg.getTrailing();
-        std::string response = "PONG :" + pongResponse;
-        sendToUser(user, response);
-        return;
+        if (!pongResponse.empty())
+            pongResponse += " ";
+        pongResponse += msg.getTrailing();
     }
+
+    sendToUser(user, "PONG :" + pongResponse);
 }
 
 void Server::handleMode(User& user, const Message& msg) {
@@ -587,6 +584,7 @@ void Server::handleTopic(User& user, const Message& msg) {
             std::string topicMessage = ":" + _serverName + " 332 " + user.getNickname() + " " + channelName + " :" + channel.getTopic();
             sendToUser(user, topicMessage);
         }
+        return;
     }
     // If the message has a trailing part, set the topic; otherwise, return the current topic
     if(channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
