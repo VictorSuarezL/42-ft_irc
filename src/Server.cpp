@@ -397,6 +397,8 @@ void Server::handlePing(User& user, const Message& msg) {
     }
 }
 
+// TODO - Refactor this handleMode
+// TODO - Make sure it works as expected
 void Server::handleMode(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
     // Implement MODE command handling logic here
