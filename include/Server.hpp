@@ -44,7 +44,7 @@ class Server
         void handleMode(User& user, const Message& msg);
         void handleKick(const Message& msg);
         void handleInvite(const Message& msg);
-        void handleTopic(const Message& msg);
+        void handleTopic(User& user, const Message& msg);
         void handlePrivMsg(User& user, const Message& msg);
         void handleUnknown(const Message& msg);
         void errorBuilder(User& user, const std::string& errorCode);
