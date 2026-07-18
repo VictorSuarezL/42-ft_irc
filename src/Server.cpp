@@ -595,7 +595,7 @@ void Server::handleTopic(User& user, const Message& msg) {
         errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
         return;
     }
-
+    // Set the topic for the channel
     channel.setTopic(msg.getTrailing());
     Logger::info("User " + user.getNickname() + " set the topic for channel " + channelName + " to: " + msg.getTrailing());
     std::string topicSetMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " TOPIC " + channelName + " :" + msg.getTrailing();
