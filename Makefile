@@ -27,4 +27,7 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re
+test: all
+	python3 -B -m unittest discover -s tests -t . -v
+
+.PHONY: all clean fclean re test
