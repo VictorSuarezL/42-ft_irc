@@ -7,6 +7,7 @@ Channel::Channel(){
     _topicRestricted = false;
     _channelKey = "";
     _userLimit = -1;
+    _isModerated = false;
 }
 
 Channel::~Channel() {}
@@ -142,4 +143,16 @@ void Channel::printChannelInfo() const {
     std::cout << "Channel Key: " << (_channelKey.empty() ? "None" : _channelKey) << std::endl;
     std::cout << "User Limit: " << (_userLimit > 0 ? std::to_string(_userLimit) : "None") << std::endl;
     std::cout << std::endl;
+}
+
+bool Channel::isModerated() const {
+    return _isModerated;
+}
+
+void Channel::setModerated(bool moderated) {
+    _isModerated = moderated;
+}
+
+bool Channel::isOperator(int userFd) const {
+    return _operators.find(userFd) != _operators.end();
 }

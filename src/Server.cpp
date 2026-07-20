@@ -319,7 +319,18 @@ void Server::handleJoin(User& user, const Message& msg) {
     std::string joinToChannelMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " JOIN " + channelName;
     broadcastMessage(joinToChannelMessage, user.getFd(), channelName);
     
-    // Send the topic of the channel to the user (TODO)
+    // Send the topic of the channel to the user
+    std::string topic = channel.getTopic();
+    if (topic.empty())
+    {
+        std::string noTopicMessage = ":" + _serverName + " 331 " + user.getNickname() + " " + channelName + " :No topic is set";
+        sendToUser(user, noTopicMessage);
+    }
+    else
+    {
+        std::string topicMessage = ":" + _serverName + " 332 " + user.getNickname() + " " + channelName + " :" + topic;
+        sendToUser(user, topicMessage);
+    }
 
     // Make user operator if they are the first user in the channel
     if (wasCreated)
@@ -365,25 +376,22 @@ void Server::handlePart(const Message& msg) {
 
 void Server::handlePing(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    // Implement PING command handling logic here
     if ((msg.getArgCount() + (msg.getTrailing().empty() ? 0 : 1)) < 1)
     {
         Logger::warning("PING command received with insufficient arguments.");
         errorBuilder(user, "ERR_NEEDMOREPARAMS");
         return;
     }
-    if (msg.getTrailing().empty())
+
+    std::string pongResponse = msg.getArgsAsString();
+    if (!msg.getTrailing().empty())
     {
-        std::string pongResponse = msg.getArgsAsString();
-        std::string response = "PONG :" + pongResponse;
-        sendToUser(user, response);
-        return;
-    } else {
-        std::string pongResponse = msg.getArgsAsString() + " " + msg.getTrailing();
-        std::string response = "PONG :" + pongResponse;
-        sendToUser(user, response);
-        return;
+        if (!pongResponse.empty())
+            pongResponse += " ";
+        pongResponse += msg.getTrailing();
     }
+
+    sendToUser(user, "PONG :" + pongResponse);
 }
 
 void Server::handleMode(User& user, const Message& msg) {
@@ -530,9 +538,66 @@ void Server::handleInvite(const Message& msg) {
     // Implement INVITE command handling logic here
 }
 
-void Server::handleTopic(const Message& msg) {
+void Server::handleTopic(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    // Implement TOPIC command handling logic here
+    // Check if the number of arguments is sufficient
+    if (msg.getArgCount() < 1) 
+    {
+        Logger::warning("TOPIC command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        return;
+    }
+    // Check if the channel exists
+    std::string channelName = msg.getArgs()[0];
+    if (_channels.find(channelName) == _channels.end()) 
+    {
+        Logger::warning("TOPIC command received for non-existent channel: " + channelName);
+        errorBuilder(user, "ERR_NOSUCHCHANNEL");
+        return;
+    }
+    // Check if the user is in the channel
+    Channel& channel = _channels[channelName];
+    if (!channel.hasUser(user.getFd()))
+    {
+        Logger::warning("User " + user.getNickname() + " is not in channel "+ channelName + " and cannot set the topic.");
+        errorBuilder(user, "ERR_NOTONCHANNEL");
+        return;
+    }
+    // Check if the user is an operator if the channel is topic restricted
+    if (channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
+    {
+        Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot set the topic.");
+        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+        return;
+    }
+    // If the message does not have a trailing part, return the current topic
+    if(!msg.hasTrailing())
+    {
+        Logger::info("User " + user.getNickname() + " requested the current topic for channel " + channelName);
+        if(channel.getTopic().empty())
+        {
+            std::string noTopicMessage = ":" + _serverName + " 331 " + user.getNickname() + " " + channelName + " :No topic is set";
+            sendToUser(user, noTopicMessage);
+        }
+        else
+        {
+            std::string topicMessage = ":" + _serverName + " 332 " + user.getNickname() + " " + channelName + " :" + channel.getTopic();
+            sendToUser(user, topicMessage);
+        }
+        return;
+    }
+    // If the message has a trailing part, set the topic; otherwise, return the current topic
+    if(channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
+    {
+        Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot set the topic.");
+        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+        return;
+    }
+    // Set the topic for the channel
+    channel.setTopic(msg.getTrailing());
+    Logger::info("User " + user.getNickname() + " set the topic for channel " + channelName + " to: " + msg.getTrailing());
+    std::string topicSetMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " TOPIC " + channelName + " :" + msg.getTrailing();
+    broadcastMessage(topicSetMessage, user.getFd(), channelName);
 }
 
 void Server::handlePrivMsg(User& user, const Message& msg) {
@@ -627,11 +692,10 @@ void Server::dispatchMessage(User& user, const Message& msg) {
     else if (!user.isRegistered())
     {
         Logger::warning("User on socket " + numberToString(user.getFd()) + " is not registered and sent command: " + cmd);
-        // Send an error message back to the user here
         errorBuilder(user, "ERR_NOTREGISTERED");
         return;
     }
-    if (user.getHasValidPassword() && user.hasNickname() && user.hasUsername())
+    if (user.getHasValidPassword() && user.hasNickname() && user.hasUsername() && !user.isRegistered())
     {
         user.setIsRegistered(true);
     }
@@ -650,7 +714,7 @@ void Server::dispatchMessage(User& user, const Message& msg) {
         else if (cmd == INVITE_STR)
             handleInvite(msg);
         else if (cmd == TOPIC_STR)
-            handleTopic(msg);
+            handleTopic(user, msg);
         else if (cmd == PRIVMSG_STR)
             handlePrivMsg(user, msg);
         else

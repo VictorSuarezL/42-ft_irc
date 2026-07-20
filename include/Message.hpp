@@ -14,6 +14,7 @@ class Message {
         std::string getCommand() const;
         void setTrailing(const std::string& trail);
         std::string getTrailing() const;
+        bool hasTrailing() const;
         void addArg(const std::string& arg);
         std::vector<std::string> getArgs() const;
         std::string getArgsAsString() const;
@@ -24,6 +25,7 @@ class Message {
         std::string command;
         std::vector<std::string> args;
         std::string trailing;
+        bool trailingPresent;
 };
 
 #endif

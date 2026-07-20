@@ -38,6 +38,9 @@ class Channel
         bool isFull() const;
         void printChannelInfo() const;
         bool hasUser(int userFd) const;
+        bool isModerated() const;
+        void setModerated(bool moderated);
+        bool isOperator(int userFd) const;
     private:
         std::string _name;
         std::string _topic;
@@ -48,6 +51,7 @@ class Channel
         bool _topicRestricted;
         std::string _channelKey;
         int _userLimit;
+        bool _isModerated;
     };
 
 #endif
