@@ -537,7 +537,7 @@ void Server::handleMode(User& user, const Message& msg) {
         if (channel.getOperatorCount() > 0)
             modeString += "o";
         if (channel.getUserLimit() > 0)
-            modeString += "l";
+                modeString += "l";
         std::string response = ":" + _serverName + " MODE " + channelName + " :" + modeString;
         sendToUser(user, response);
         return;    
@@ -838,67 +838,41 @@ void Server::handleInvite(User &user, const Message& msg) {
 
 void Server::handleTopic(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    // Check if the number of arguments is sufficient
-    if (msg.getArgCount() < 1) 
-    {
+    if (msg.getArgCount() < 1) {
         Logger::warning("TOPIC command received with insufficient arguments.");
         errorBuilder(user, "ERR_NEEDMOREPARAMS");
         return;
     }
-    // Check if the channel exists
-    std::string channelName = msg.getArgs()[0];
-    if (_channels.find(channelName) == _channels.end()) 
-    {
+
+    const std::string channelName = msg.getArgs()[0];
+    if (_channels.find(channelName) == _channels.end()) {
         Logger::warning("TOPIC command received for non-existent channel: " + channelName);
         errorBuilder(user, "ERR_NOSUCHCHANNEL");
         return;
     }
-    // Check if the user is in the channel
+
     Channel& channel = _channels[channelName];
-    if (!channel.hasUser(user.getFd()))
-    {
-        Logger::warning("User " + user.getNickname() + " is not in channel "+ channelName + " and cannot set the topic.");
+    if (!channel.hasUser(user.getFd())) {
+        Logger::warning("TOPIC command received from user not in channel: " + user.getNickname());
         errorBuilder(user, "ERR_NOTONCHANNEL");
         return;
     }
-    // Check if the user is an operator if the channel is topic restricted
-    if (channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
-    {
-        Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot set the topic.");
-        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
-        return;
-    }
-    // If the message does not have a trailing part, return the current topic
-    if(!msg.hasTrailing())
-    {
-        Logger::info("User " + user.getNickname() + " requested the current topic for channel " + channelName);
-        if(channel.getTopic().empty())
-        {
-            std::string noTopicMessage = ":" + _serverName + " 331 " + user.getNickname() + " " + channelName + " :No topic is set";
-            sendToUser(user, noTopicMessage);
+
+    if (!msg.getTrailing().empty()) {
+        if (channel.isTopicRestricted() && !channel.isOperator(user.getFd())) {
+            Logger::warning("TOPIC change denied for non-operator user: " + user.getNickname());
+            errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+            return;
         }
-        else
-        {
-            std::string topicMessage = ":" + _serverName + " 332 " + user.getNickname() + " " + channelName + " :" + channel.getTopic();
-            sendToUser(user, topicMessage);
-        }
+        channel.setTopic(msg.getTrailing());
         return;
     }
-    // If the message has a trailing part, set the topic; otherwise, return the current topic
-    if(channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
-    {
-        Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot set the topic.");
-        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
-        return;
-    }
-    // Set the topic for the channel
-    channel.setTopic(msg.getTrailing());
-    Logger::info("User " + user.getNickname() + " set the topic for channel " + channelName + " to: " + msg.getTrailing());
-    std::string topicSetMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " TOPIC " + channelName + " :" + msg.getTrailing();
-    broadcastMessage(topicSetMessage, user.getFd(), channelName);
+
+    std::string response = ":" + _serverName + " 332 " + user.getNickname() + " " + channelName + " :" + channel.getTopic();
+    sendToUser(user, response);
 }
 
-void Server::handlePrivMsg(User& user, const Message& msg) {
+void Server::handlePrivMsg(const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
     // Implement PRIVMSG command handling logic here
     if (msg.getArgCount() < 1)
