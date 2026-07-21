@@ -51,6 +51,10 @@ bool Channel::hasUser(int userFd) const {
     return _users.find(userFd) != _users.end();
 }
 
+bool Channel::isOperator(int userFd) const {
+    return _operators.find(userFd) != _operators.end();
+}
+
 bool Channel::addOperator(int userFd) {
         if (!hasUser(userFd))
         return false;
@@ -123,7 +127,7 @@ void Channel::setUserLimit(int limit) {
 }
 
 bool Channel::isFull() const {
-    return _userLimit > 0 && _users.size() == static_cast<size_t>(_userLimit);
+    return _userLimit > 0 && _users.size() >= static_cast<size_t>(_userLimit);
 }
 
 void Channel::printChannelInfo() const {

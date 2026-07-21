@@ -495,7 +495,6 @@ void Server::handlePing(User& user, const Message& msg) {
 // TODO - Make sure it works as expected
 void Server::handleMode(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    // Implement MODE command handling logic here
     if (msg.getArgCount() < 1)
     {
         Logger::warning("MODE command received with insufficient arguments.");
@@ -503,7 +502,6 @@ void Server::handleMode(User& user, const Message& msg) {
         return;
     }
     if (msg.getArgCount() == 1) {
-        // Show channel modes
         std::string channelName = msg.getArgs()[0];
         if (_channels.find(channelName) == _channels.end()) {
             Logger::warning("MODE command received for non-existent channel: " + channelName);
@@ -518,29 +516,39 @@ void Server::handleMode(User& user, const Message& msg) {
             modeString += "t";
         if (!channel.getChannelKey().empty())
             modeString += "k";
+        if (channel.getOperatorCount() > 0)
+            modeString += "o";
         if (channel.getUserLimit() > 0)
-            modeString += "l";
+                modeString += "l";
         std::string response = ":" + _serverName + " MODE " + channelName + " :" + modeString;
         sendToUser(user, response);
         return;    
     }
+
     std::vector<std::string> args = msg.getArgs();
     std::string target = args[0];
-    // Check if the target is a channel
+
     if (target[0] == '#') {
-        // Validate channel exists
         if (_channels.find(target) == _channels.end()) {
             Logger::warning("MODE command received for non-existent channel: " + target);
             errorBuilder(user, "ERR_NOSUCHCHANNEL");
             return;
         }
+
         Channel& channel = _channels[target];
+
+        if (!channel.hasUser(user.getFd()) || !channel.isOperator(user.getFd())) {
+            Logger::warning("User " + user.getNickname() + " tried to change channel mode without operator privileges on " + target);
+            errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+            return;
+        }
+
         std::string modeChanges = args[1];
-        // Process mode changes ONLY i, t, k, o, l for now
+        bool adding = true;
+
         for (size_t i = 0; i < modeChanges.size(); ++i)
         {            
             char mode = modeChanges[i];
-            bool adding = true;
             if (mode == '+') {
                 adding = true;
                 continue;
@@ -548,6 +556,7 @@ void Server::handleMode(User& user, const Message& msg) {
                 adding = false;
                 continue;
             }
+
             switch (mode) {
                 case 'i':
                     channel.setInviteOnly(adding);
@@ -560,6 +569,7 @@ void Server::handleMode(User& user, const Message& msg) {
                         if (args.size() < 3) {
                             Logger::warning("MODE command received with insufficient arguments for +k mode.");
                             errorBuilder(user, "ERR_NEEDMOREPARAMS");
+                            return;
                         }
                         channel.setChannelKey(args[2]);
                     } else {
@@ -570,20 +580,31 @@ void Server::handleMode(User& user, const Message& msg) {
                     if (args.size() < 3) {
                         Logger::warning("MODE command received with insufficient arguments for +o/-o mode.");
                         errorBuilder(user, "ERR_NEEDMOREPARAMS");
+                        return;
                     }
-                    // Find the user by nickname
+
                     std::string targetNickname = args[2];
                     int targetFd = -1;
+
                     for (std::map<int, User>::iterator it = _users.begin(); it != _users.end(); ++it) {
                         if (it->second.getNickname() == targetNickname) {
                             targetFd = it->first;
                             break;
                         }
                     }
+
                     if (targetFd == -1) {
                         Logger::warning("MODE command received with non-existent user: " + targetNickname);
                         errorBuilder(user, "ERR_NOSUCHNICK");
+                        return;
                     }
+
+                    if (!channel.hasUser(targetFd)) {
+                        Logger::warning("MODE command received for user not in channel: " + targetNickname);
+                        errorBuilder(user, "ERR_USERNOTINCHANNEL");
+                        return;
+                    }
+
                     if (adding) {
                         channel.addOperator(targetFd);
                     } else {
@@ -612,19 +633,16 @@ void Server::handleMode(User& user, const Message& msg) {
                 }
             default:
                 Logger::warning("MODE command received with unknown mode: " + std::string(1, mode));
-                errorBuilder(user, "ERR_UMODEUNKNOWNFLAG");
+                errorBuilder(user, "ERR_UNKNOWNMODE");
                 return;
             }
         }
 
     } else {
-        // Handle user mode changes (not implemented in this version)
         Logger::warning("User mode changes are not supported yet.");
         errorBuilder(user, "ERR_UMODEUNKNOWNFLAG");
         return;
     }
-
-
 }
 
 void Server::handleKick(User &user, const Message& msg) {
@@ -802,67 +820,41 @@ void Server::handleInvite(User &user, const Message& msg) {
 
 void Server::handleTopic(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    // Check if the number of arguments is sufficient
-    if (msg.getArgCount() < 1) 
-    {
+    if (msg.getArgCount() < 1) {
         Logger::warning("TOPIC command received with insufficient arguments.");
         errorBuilder(user, "ERR_NEEDMOREPARAMS");
         return;
     }
-    // Check if the channel exists
-    std::string channelName = msg.getArgs()[0];
-    if (_channels.find(channelName) == _channels.end()) 
-    {
+
+    const std::string channelName = msg.getArgs()[0];
+    if (_channels.find(channelName) == _channels.end()) {
         Logger::warning("TOPIC command received for non-existent channel: " + channelName);
         errorBuilder(user, "ERR_NOSUCHCHANNEL");
         return;
     }
-    // Check if the user is in the channel
+
     Channel& channel = _channels[channelName];
-    if (!channel.hasUser(user.getFd()))
-    {
-        Logger::warning("User " + user.getNickname() + " is not in channel "+ channelName + " and cannot set the topic.");
+    if (!channel.hasUser(user.getFd())) {
+        Logger::warning("TOPIC command received from user not in channel: " + user.getNickname());
         errorBuilder(user, "ERR_NOTONCHANNEL");
         return;
     }
-    // Check if the user is an operator if the channel is topic restricted
-    if (channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
-    {
-        Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot set the topic.");
-        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
-        return;
-    }
-    // If the message does not have a trailing part, return the current topic
-    if(!msg.hasTrailing())
-    {
-        Logger::info("User " + user.getNickname() + " requested the current topic for channel " + channelName);
-        if(channel.getTopic().empty())
-        {
-            std::string noTopicMessage = ":" + _serverName + " 331 " + user.getNickname() + " " + channelName + " :No topic is set";
-            sendToUser(user, noTopicMessage);
+
+    if (!msg.getTrailing().empty()) {
+        if (channel.isTopicRestricted() && !channel.isOperator(user.getFd())) {
+            Logger::warning("TOPIC change denied for non-operator user: " + user.getNickname());
+            errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+            return;
         }
-        else
-        {
-            std::string topicMessage = ":" + _serverName + " 332 " + user.getNickname() + " " + channelName + " :" + channel.getTopic();
-            sendToUser(user, topicMessage);
-        }
+        channel.setTopic(msg.getTrailing());
         return;
     }
-    // If the message has a trailing part, set the topic; otherwise, return the current topic
-    if(channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
-    {
-        Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot set the topic.");
-        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
-        return;
-    }
-    // Set the topic for the channel
-    channel.setTopic(msg.getTrailing());
-    Logger::info("User " + user.getNickname() + " set the topic for channel " + channelName + " to: " + msg.getTrailing());
-    std::string topicSetMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " TOPIC " + channelName + " :" + msg.getTrailing();
-    broadcastMessage(topicSetMessage, user.getFd(), channelName);
+
+    std::string response = ":" + _serverName + " 332 " + user.getNickname() + " " + channelName + " :" + channel.getTopic();
+    sendToUser(user, response);
 }
 
-void Server::handlePrivMsg(User& user, const Message& msg) {
+void Server::handlePrivMsg(const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
     // Implement PRIVMSG command handling logic here
     if (msg.getArgCount() < 1)

@@ -22,6 +22,7 @@ class Channel
         void removeOperator(const User& user);
         std::set<int> getOperators() const;
         int getOperatorCount() const;
+        bool isOperator(int userFd) const;
         void inviteUser(const User& user);
         void removeInvite(const User& user);
         std::set<int> getInvitedUsers() const;
