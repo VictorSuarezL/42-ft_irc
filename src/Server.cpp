@@ -112,14 +112,71 @@ void Server::run(void)
 
     for (size_t i = 0; i < _fds.size(); ++i)
     {
-        if (_fds[i].revents & POLLIN)
+        int fd = _fds[i].fd;
+        short revents = _fds[i].revents;
+        if(revents & (POLLERR | POLLHUP | POLLNVAL))
         {
-            if (_fds[i].fd == _socket)
-                acceptClient();
-            else
-                receiveFromClient(i);
+            // TODO - Desconectar mediante la función centralizada 
+            Logger::info("Client disconnected from socket " + numberToString(fd) + ".");
+        }
+        else
+        {
+            if (revents & POLLIN)
+            {
+                if (fd == _socket)
+                    acceptClient();
+                else
+                    receiveFromClient(i);
+            }
+            if (revents & POLLOUT)
+            {
+                for (size_t j = 0; j < _fds.size(); ++j)
+                {
+                    if (_fds[j].fd == fd)
+                    {
+                        sendPendingData(j);
+                        break;
+                    }
+                }
+            }
         }
     }
+}
+
+void Server::sendPendingData(size_t index)
+{
+    int fd = _fds[index].fd;
+    User &user = _users[fd];
+
+    while(user.hasPendingOutput())
+    {
+        const std::string &buffer = user.getOutputBuffer();
+        ssize_t sent = send(fd, buffer.c_str(), buffer.size(), 0);
+
+        if(sent > 0)
+        {
+            Logger::debug("Sent " + numberToString(sent) + " bytes to socket " + numberToString(fd) + ".");
+            user.consumeOutputBuffer(sent);
+        }
+        else if(sent < 0 && errno == EINTR)
+        {
+            Logger::warning("Send interrupted by signal for socket " + numberToString(fd) + ". Retrying...");
+            continue; // Retry sending
+        }
+        else if(sent < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+        {
+            Logger::warning("Send would block for socket " + numberToString(fd) + ". Will retry later.");
+            return; // Exit the loop and try again later
+        }
+        else
+        {
+            Logger::error("Failed to send data to socket " + numberToString(fd) + ": " + std::string(std::strerror(errno)));
+            // TODO - Handle disconnection or error cleanup here if necessary
+            return;
+        }
+    }
+
+    _fds[index].events &= ~POLLOUT; // Disable POLLOUT if there's no more data to send
 }
 
 void Server::acceptClient(void)
@@ -649,7 +706,7 @@ void Server::handlePrivMsg(User& user, const Message& msg) {
             return;
         }
         std::string formattedMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " PRIVMSG " + target + " :" + message;
-        const User* targetUser = getUserByNickname(target);
+        User* targetUser = getUserByNickname(target);
         if(targetUser == NULL)
         {
             Logger::warning("PRIVMSG command received for non-existent user: " + target);
@@ -724,10 +781,22 @@ void Server::dispatchMessage(User& user, const Message& msg) {
     }
 }
 
-void Server::sendToUser(const User &user, const std::string &message)
+void Server::sendToUser(User &user, const std::string &message)
 {
-    std::string response = message + "\r\n";
-    send(user.getFd(), response.c_str(), response.size(), 0);
+    user.appendToOutputBuffer(message + "\r\n");
+    enablePollOut(user.getFd());
+}
+    
+void Server::enablePollOut(int fd)
+{
+    for (size_t i = 0; i < _fds.size(); ++i)
+    {
+        if (_fds[i].fd == fd)
+        {
+            _fds[i].events |= POLLOUT;
+            return;
+        }
+    }
 }
 
 void Server::errorBuilder(User& user, const std::string& errorCode) {
@@ -789,9 +858,9 @@ void Server::broadcastMessage(const std::string& message, int senderFd, const st
     }
 }
 
-const User *Server::getUserByNickname(const std::string &nickname) const
+User *Server::getUserByNickname(const std::string &nickname)
 {
-    for (std::map<int, User>::const_iterator it = _users.begin(); it != _users.end(); ++it)
+    for (std::map<int, User>::iterator it = _users.begin(); it != _users.end(); ++it)
     {
         if (it->second.getNickname() == nickname)
             return &(it->second);

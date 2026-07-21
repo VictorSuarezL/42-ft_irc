@@ -8,6 +8,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    signal(SIGPIPE, SIG_IGN);
+
     Server server(argv[1], argv[2]);
     signal(SIGINT, server.signalHandler);
     while (!server.getServerStop()) {
