@@ -22,11 +22,15 @@ class Server
         std::map<int, User> _users;
         volatile static bool _serverStop;
         std::map<std::string, Channel> _channels;
+        std::set<int> _clientsToDisconnect;
 
         bool parsePort(const std::string &port);
         bool parsePassword(const std::string &password);
         void acceptClient(void);
         void receiveFromClient(size_t index);
+        void disconnectClient(int fd);
+        void scheduleDisconnection(int fd);
+        void processDisconnections();
 
     public:
         Server(const std::string &port, const std::string &password);
