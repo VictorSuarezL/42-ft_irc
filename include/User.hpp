@@ -22,10 +22,12 @@ class User {
         void setIsRegistered(bool isRegistered);
         std::string getInputBuffer() const;
         void setInputBuffer(const std::string& inputBuffer);
-        std::string getOutputBuffer() const;
+        std::string& getOutputBuffer();
+        const std::string& getOutputBuffer() const;
         void setOutputBuffer(const std::string& outputBuffer);
         void appendToInputBuffer(const std::string& data);
         std::vector<std::string> extractCompleteMessages();
+        void consumeOutputBuffer(size_t count);
         void appendToOutputBuffer(const std::string& data);
         bool hasPendingOutput() const;
         bool getToDelete() const;

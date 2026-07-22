@@ -22,11 +22,15 @@ class Server
         std::map<int, User> _users;
         volatile static bool _serverStop;
         std::map<std::string, Channel> _channels;
+        std::set<int> _clientsToDisconnect;
 
         bool parsePort(const std::string &port);
         bool parsePassword(const std::string &password);
         void acceptClient(void);
         void receiveFromClient(size_t index);
+        void disconnectClient(int fd);
+        void scheduleDisconnection(int fd);
+        void processDisconnections();
 
     public:
         Server(const std::string &port, const std::string &password);
@@ -34,7 +38,9 @@ class Server
         void createSocket();
         void run(void);
         void dispatchMessage(User& user, const Message& msg);
-        void sendToUser(const User &user, const std::string &message);
+        void sendToUser(User &user, const std::string &message);
+        void sendPendingData(size_t index);
+        void enablePollOut(int fd);
         void handlePass(User &user, const Message& msg);
         void handleNick(User& user, const Message& msg);
         void handleUser(User& user, const Message& msg);
@@ -54,7 +60,7 @@ class Server
         static bool getServerStop();
         void serverShutdown();
         void broadcastMessage(const std::string& message, int senderFd, const std::string& channelName);
-        const User *getUserByNickname(const std::string& nickname) const;
+        User *getUserByNickname(const std::string& nickname);
 
 
         // int checkConnections(void);

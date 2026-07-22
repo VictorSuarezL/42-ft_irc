@@ -63,7 +63,11 @@ void User::setInputBuffer(const std::string& inputBuffer) {
     this->_inputBuffer = inputBuffer;
 }
 
-std::string User::getOutputBuffer() const {
+std::string& User::getOutputBuffer() {
+    return _outputBuffer;
+}
+
+const std::string& User::getOutputBuffer() const {
     return _outputBuffer;
 }
 
@@ -84,6 +88,11 @@ std::vector<std::string> User::extractCompleteMessages() {
         _inputBuffer.erase(0, pos + 1);
     }
     return messages;
+}
+
+void User::consumeOutputBuffer(size_t count)
+{
+    _outputBuffer.erase(0, count);
 }
 
 void User::appendToOutputBuffer(const std::string& data) {

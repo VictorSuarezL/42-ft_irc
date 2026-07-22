@@ -106,20 +106,97 @@ void Server::run(void)
 
     if (ready < 0)
     {
+        if (errno == EINTR)
+            return;
         Logger::error("poll failed.");
+        
+        setServerStop(true);
         return;
     }
 
-    for (size_t i = 0; i < _fds.size(); ++i)
+    size_t polledFdCount = _fds.size();
+
+    for(size_t i = 0; i < polledFdCount; ++i)
     {
-        if (_fds[i].revents & POLLIN)
+        int fd = _fds[i].fd;
+        short revents = _fds[i].revents;
+
+        if(revents == 0)
+            continue; // No events for this fd, skip to the next one
+        
+        if(fd == _socket)
         {
-            if (_fds[i].fd == _socket)
+            if(revents & (POLLERR | POLLHUP | POLLNVAL))
+            {
+                Logger::error("Server socket error. Stopping server.");
+                setServerStop(true);
+                break;
+            }
+            
+            if(revents & POLLIN)
                 acceptClient();
-            else
-                receiveFromClient(i);
+            
+            continue; // Skip to the next fd after handling the server socket
+        }
+
+        if(revents & (POLLERR | POLLHUP | POLLNVAL))
+        {
+            Logger::info("Client disconnected from socket " + numberToString(fd) + ".");
+            scheduleDisconnection(fd);
+            continue; // Skip to the next fd after scheduling disconnection
+        }
+
+        if(revents & POLLIN)
+            receiveFromClient(i);
+
+        if(_clientsToDisconnect.find(fd) != _clientsToDisconnect.end())
+        {
+            Logger::info("Client on socket " + numberToString(fd) + " scheduled for disconnection.");
+            continue; // Skip to the next fd after disconnecting
+        }
+
+        if(revents & POLLOUT)
+            sendPendingData(i);
+    }
+
+    processDisconnections(); // Process any scheduled disconnections after handling all fds
+
+}
+
+void Server::sendPendingData(size_t index)
+{
+    int fd = _fds[index].fd;
+    User &user = _users[fd];
+
+    while(user.hasPendingOutput())
+    {
+        const std::string &buffer = user.getOutputBuffer();
+        ssize_t sent = send(fd, buffer.c_str(), buffer.size(), 0);
+
+        if(sent > 0)
+        {
+            Logger::debug("Sent " + numberToString(sent) + " bytes to socket " + numberToString(fd) + ".");
+            user.consumeOutputBuffer(sent);
+        }
+        else if(sent < 0 && errno == EINTR)
+        {
+            Logger::warning("Send interrupted by signal for socket " + numberToString(fd) + ". Retrying...");
+            continue; // Retry sending
+        }
+        else if(sent < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+        {
+            Logger::warning("Send would block for socket " + numberToString(fd) + ". Will retry later.");
+            return; // Exit the loop and try again later
+        }
+        else
+        {
+            Logger::error("Failed to send data to socket " + numberToString(fd) + ": " + std::string(std::strerror(errno)));
+            scheduleDisconnection(fd);
+            return;
         }
     }
+
+    _fds[index].events &= ~POLLOUT; // Disable POLLOUT if there's no more data to send
 }
 
 void Server::acceptClient(void)
@@ -160,23 +237,34 @@ void Server::acceptClient(void)
 
 void Server::receiveFromClient(size_t index)
 {
+    int fd = _fds[index].fd;
     char buffer[512]; // 1024??
-    memset(buffer, 0, sizeof(buffer));
-    int bytesRead = recv(_fds[index].fd, buffer, sizeof(buffer) - 1, 0);
+    // memset(buffer, 0, sizeof(buffer));
+    ssize_t bytesRead = recv(fd, buffer, sizeof(buffer), 0);
 
-    if (bytesRead <= 0)
+    if(bytesRead == 0)
     {
-        Logger::info("Client disconnected from socket " + numberToString(_fds[index].fd) + ".");
-        close(_fds[index].fd);
-        _users.erase(_fds[index].fd);
-        _fds.erase(_fds.begin() + index);
+        Logger::info("Client closed socket " + numberToString(fd) + ".");
+        scheduleDisconnection(fd);
+        return;
+    }
+
+    if (bytesRead < 0)
+    {
+        if(errno == EINTR)
+        return;
+        if(errno == EAGAIN || errno == EWOULDBLOCK)
+        return;
+        Logger::error("recv failed on socket " + numberToString(fd) + ": " + std::string(std::strerror(errno)));
+        
+        scheduleDisconnection(fd);
         return;
     }
     std::string data(buffer, bytesRead);
 
-    User &user = _users[_fds[index].fd];
+    User &user = _users[fd];
     user.appendToInputBuffer(data);
-    buffer[bytesRead] = '\0';
+    // buffer[bytesRead] = '\0';
 
     std::vector<std::string> rawMessages = user.extractCompleteMessages();
     for (size_t i = 0; i < rawMessages.size(); ++i)
@@ -394,6 +482,8 @@ void Server::handlePing(User& user, const Message& msg) {
     sendToUser(user, "PONG :" + pongResponse);
 }
 
+// TODO - Refactor this handleMode
+// TODO - Make sure it works as expected
 void Server::handleMode(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
     // Implement MODE command handling logic here
@@ -647,7 +737,7 @@ void Server::handlePrivMsg(User& user, const Message& msg) {
             return;
         }
         std::string formattedMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " PRIVMSG " + target + " :" + message;
-        const User* targetUser = getUserByNickname(target);
+        User* targetUser = getUserByNickname(target);
         if(targetUser == NULL)
         {
             Logger::warning("PRIVMSG command received for non-existent user: " + target);
@@ -722,17 +812,28 @@ void Server::dispatchMessage(User& user, const Message& msg) {
     }
 }
 
-void Server::sendToUser(const User &user, const std::string &message)
+void Server::sendToUser(User &user, const std::string &message)
 {
-    std::string response = message + "\r\n";
-    send(user.getFd(), response.c_str(), response.size(), 0);
+    user.appendToOutputBuffer(message + "\r\n");
+    enablePollOut(user.getFd());
+}
+    
+void Server::enablePollOut(int fd)
+{
+    for (size_t i = 0; i < _fds.size(); ++i)
+    {
+        if (_fds[i].fd == fd)
+        {
+            _fds[i].events |= POLLOUT;
+            return;
+        }
+    }
 }
 
 void Server::errorBuilder(User& user, const std::string& errorCode) {
     std::pair<int, std::string> errorMessage = getErrorMessage(errorCode);
     int errorCodeInt = errorMessage.first;
     const std::string& errorMessageStr = errorMessage.second;
-    // :<server_name> <error_code> <nickname> :<error_message>
     std::string response = ":" + _serverName + " " + numberToString(errorCodeInt) + " " + user.getNickname() + " " + errorMessageStr;
     sendToUser(user, response);
 }
@@ -787,12 +888,123 @@ void Server::broadcastMessage(const std::string& message, int senderFd, const st
     }
 }
 
-const User *Server::getUserByNickname(const std::string &nickname) const
+User *Server::getUserByNickname(const std::string &nickname)
 {
-    for (std::map<int, User>::const_iterator it = _users.begin(); it != _users.end(); ++it)
+    for (std::map<int, User>::iterator it = _users.begin(); it != _users.end(); ++it)
     {
         if (it->second.getNickname() == nickname)
             return &(it->second);
     }
     return NULL;
 }
+
+void Server::disconnectClient(int fd)
+{
+    std::map<int, User>::iterator userIt = _users.find(fd);
+
+    if (userIt == _users.end())
+    {
+        Logger::warning(
+            "Cannot disconnect unknown client on socket "
+            + numberToString(fd) + "."
+        );
+
+        for (std::vector<pollfd>::iterator it = _fds.begin();
+             it != _fds.end();)
+        {
+            if (it->fd == fd)
+                it = _fds.erase(it);
+            else
+                ++it;
+        }
+
+        return;
+    }
+
+    User &user = userIt->second;
+    std::string nickname = user.getNickname();
+
+    Logger::info(
+        "Disconnecting client "
+        + nickname
+        + " on socket "
+        + numberToString(fd) + "."
+    );
+
+    std::map<std::string, Channel>::iterator channelIt =
+        _channels.begin();
+
+    while (channelIt != _channels.end())
+    {
+        Channel &channel = channelIt->second;
+
+        if (channel.isOperator(fd))
+            channel.removeOperator(user);
+
+        if (channel.isInvited(fd))
+            channel.removeInvite(user);
+
+        if (channel.hasUser(fd))
+            channel.removeUser(user);
+
+        if (channel.getUserCount() == 0)
+        {
+            std::map<std::string, Channel>::iterator toErase =
+                channelIt;
+
+            ++channelIt;
+            _channels.erase(toErase);
+        }
+        else
+        {
+            ++channelIt;
+        }
+    }
+
+    for (std::vector<pollfd>::iterator it = _fds.begin();
+         it != _fds.end();)
+    {
+        if (it->fd == fd)
+            it = _fds.erase(it);
+        else
+            ++it;
+    }
+
+    _users.erase(userIt);
+
+    if (close(fd) < 0)
+    {
+        Logger::warning(
+            "close failed on socket "
+            + numberToString(fd)
+            + ": "
+            + std::string(std::strerror(errno))
+        );
+    }
+}
+
+void Server::scheduleDisconnection(int fd)
+{
+    if(fd < 0 || fd == _socket)
+    {
+        Logger::warning("Attempted to schedule disconnection for invalid socket " + numberToString(fd) + ".");
+        return;
+    }
+    Logger::info("Scheduling disconnection for client on socket " + numberToString(fd) + ".");
+    _clientsToDisconnect.insert(fd);
+}
+
+void Server::processDisconnections()
+{
+    while (!_clientsToDisconnect.empty())
+    {
+        std::set<int>::iterator it =
+            _clientsToDisconnect.begin();
+
+        int fd = *it;
+        _clientsToDisconnect.erase(it);
+
+        disconnectClient(fd);
+    }
+}
+
