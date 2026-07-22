@@ -630,7 +630,95 @@ void Server::handleMode(User& user, const Message& msg) {
 void Server::handleKick(User &user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
 
+    if(msg.getArgCount() < 2)
+    {
+        Logger::warning("KICK command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        return;
+    }
+
+    std::string channelName = msg.getArgs()[0];
+    std::string targetNickname = msg.getArgs()[1];
+
     
+    std::map<std::string, Channel>::iterator channelIt = _channels.find(channelName);
+    if(channelIt == _channels.end())
+    {
+        Logger::warning("KICK command received for non-existent channel: " + channelName);
+        errorBuilder(user, "ERR_NOSUCHCHANNEL");
+        return;
+    }
+    
+    User* targetUser = getUserByNickname(targetNickname);
+    if(!targetUser)
+    {
+        Logger::warning("KICK command received for non-existent user: " + targetNickname);
+        errorBuilder(user, "ERR_NOSUCHNICK");
+        return;
+    }
+    
+    Channel& channel = channelIt->second;
+
+    if(!channel.hasUser(user.getFd()))
+    {
+        Logger::warning("User " + user.getNickname() + " is not in channel " + channelName + " and cannot invite others.");
+        errorBuilder(user, "ERR_NOTONCHANNEL");
+        return;
+    }
+
+    if(!channel.isOperator(user.getFd()))
+    {
+        Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot invite others.");
+        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+        return;
+    }
+
+    if(!channel.hasUser(targetUser->getFd()))
+    {
+        Logger::warning("User " + targetNickname + " is not in channel " + channelName + " and cannot be invited.");
+        errorBuilder(user, "ERR_USERNOTINCHANNEL");
+        return;
+    }
+
+    std::string reason;
+
+    if(msg.hasTrailing())
+        reason = msg.getTrailing();
+    else if(msg.getArgCount() >= 3)
+        reason = msg.getArgs()[2];
+    else
+        reason = user.getNickname();
+
+    channel.removeUser(*targetUser);
+    Logger::info("User " + user.getNickname() + " kicked " + targetNickname + " from channel " + channelName + " for reason: " + reason);
+    
+    std::string notification =
+        ":" + user.getNickname()
+        + "!" + user.getUsername()
+        + "@" + _serverName
+        + " KICK "
+        + channelName
+        + " "
+        + targetNickname
+        + " :"
+        + reason;
+
+    sendToUser(*targetUser, notification);
+    broadcastMessage(notification, user.getFd(), channelName);
+
+    if(channel.isOperator(targetUser->getFd()))
+    {
+        channel.removeOperator(*targetUser);
+        Logger::info("User " + targetNickname + " was an operator in channel " + channelName + " and has been removed from the operator list.");
+    }
+    
+    if(channel.isInvited(targetUser->getFd()))
+    {
+        channel.removeInvite(*targetUser);
+        Logger::info("User " + targetNickname + " was invited to channel " + channelName + " and has now been kicked.");
+    }
+
+    channel.removeUser(*targetUser);
 }
 
 void Server::handleInvite(User &user, const Message& msg) {
@@ -646,19 +734,20 @@ void Server::handleInvite(User &user, const Message& msg) {
     std::string targetNickname = msg.getArgs()[0];
     std::string channelName = msg.getArgs()[1];
 
-    User* targetUser = getUserByNickname(targetNickname);
-    if(!targetUser)
-    {
-        Logger::warning("INVITE command received for non-existent user: " + targetNickname);
-        errorBuilder(user, "ERR_NOSUCHNICK");
-        return;
-    }
-
+    
     std::map<std::string, Channel>::iterator channelIt = _channels.find(channelName);
     if(channelIt == _channels.end())
     {
         Logger::warning("INVITE command received for non-existent channel: " + channelName);
         errorBuilder(user, "ERR_NOSUCHCHANNEL");
+        return;
+    }
+    
+    User* targetUser = getUserByNickname(targetNickname);
+    if(!targetUser)
+    {
+        Logger::warning("INVITE command received for non-existent user: " + targetNickname);
+        errorBuilder(user, "ERR_NOSUCHNICK");
         return;
     }
 
