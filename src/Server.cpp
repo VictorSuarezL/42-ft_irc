@@ -767,10 +767,10 @@ void Server::handleInvite(User &user, const Message& msg) {
         return;
     }
 
-    if(!channel.hasUser(targetUser->getFd()))
+    if(channel.hasUser(targetUser->getFd()))
     {
-        Logger::warning("User " + targetNickname + " is not in channel " + channelName + " and cannot be invited.");
-        errorBuilder(user, "ERR_USERNOTINCHANNEL");
+        Logger::warning("User " + targetNickname + " is already in channel " + channelName + " and cannot be invited.");
+        errorBuilder(user, "ERR_USERONCHANNEL");
         return;
     }
 
