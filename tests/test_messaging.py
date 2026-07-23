@@ -19,7 +19,7 @@ class MessagingTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":alice!alice@definitely_not_discord PRIVMSG #general :Hello channel",
+            ":alice!alice@host PRIVMSG #general :Hello channel",
         )
 
     def test_private_message_reaches_target_user(self):
@@ -30,7 +30,7 @@ class MessagingTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":alice!alice@definitely_not_discord PRIVMSG bob :Hello Bob",
+            ":alice!alice@host PRIVMSG bob :Hello Bob",
         )
 
     def test_privmsg_to_unknown_user_returns_401(self):

@@ -65,7 +65,7 @@ class KickTests(IRCIntegrationTest):
 
         operator.send_command("KICK " + self.CHANNEL + " alice :You are being kicked!")
 
-        self.expect(bob, f":operator!operator@definitely_not_discord KICK {self.CHANNEL} alice :You are being kicked!")
+        self.expect(bob, f":operator!operator@host KICK {self.CHANNEL} alice :You are being kicked!")
 
     def test_kick_without_reason_uses_kicker_nickname_as_reason(self):
         operator = self.register_client("operator")
@@ -75,7 +75,7 @@ class KickTests(IRCIntegrationTest):
 
         operator.send_command("KICK " + self.CHANNEL + " alice")
 
-        self.expect(alice, f":operator!operator@definitely_not_discord KICK {self.CHANNEL} alice :operator")
+        self.expect(alice, f":operator!operator@host KICK {self.CHANNEL} alice :operator")
 
     def test_kicked_user_is_removed_from_channel(self):
         operator = self.register_client("operator")

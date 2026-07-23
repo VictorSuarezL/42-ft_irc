@@ -30,7 +30,7 @@ bool Server::parsePassword(const std::string &password) {
     return true;
 }
 
-Server::Server(const std::string &port, const std::string &password) : _port(0), _password(password), _serverName("definitely_not_discord")
+Server::Server(const std::string &port, const std::string &password) : _port(0), _password(password), _serverName("host")
 {
     if (!parsePort(port))
     {

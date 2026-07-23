@@ -1,6 +1,5 @@
 from tests.irc_test_case import IRCIntegrationTest
 
-
 class JoinTests(IRCIntegrationTest):
     CHANNEL = "#general"
 
@@ -21,7 +20,7 @@ class JoinTests(IRCIntegrationTest):
 
         self.join_channel(bob, "bob", self.CHANNEL)
 
-        self.expect(alice, ":bob!bob@definitely_not_discord JOIN #general")
+        self.expect(alice, ":bob!bob@host JOIN #general")
 
     def test_invalid_channel_name_returns_476(self):
         alice = self.register_client("alice")

@@ -71,7 +71,7 @@ class InviteTests(IRCIntegrationTest):
 
         alice.send_command("INVITE bob " + self.CHANNEL)
 
-        self.expect(bob, f":alice!alice@definitely_not_discord INVITE bob :{self.CHANNEL}")
+        self.expect(bob, f":alice!alice@host INVITE bob :{self.CHANNEL}")
 
         self.expect(alice, f" 341 alice bob {self.CHANNEL}")
 
@@ -108,7 +108,7 @@ class InviteTests(IRCIntegrationTest):
 
         bob.send_command("JOIN " + self.CHANNEL)
 
-        self.expect(bob, f":bob!bob@definitely_not_discord JOIN {self.CHANNEL}")
+        self.expect(bob, f":bob!bob@host JOIN {self.CHANNEL}")
 
     # def test_invitation_is_removed_after_user_joins(self):
     #     alice = self.register_client("alice")
@@ -122,7 +122,7 @@ class InviteTests(IRCIntegrationTest):
 
     #     bob.send_command("JOIN " + self.CHANNEL)
 
-    #     self.expect(bob, f":bob!bob@definitely_not_discord JOIN {self.CHANNEL}")
+    #     self.expect(bob, f":bob!bob@host JOIN {self.CHANNEL}")
 
     #     bob.send_command("PART " + self.CHANNEL)
 
