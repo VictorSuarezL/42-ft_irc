@@ -175,7 +175,7 @@ void Server::sendPendingData(size_t index)
 
         if(sent > 0)
         {
-            Logger::debug("Sent " + numberToString(sent) + " bytes to socket " + numberToString(fd) + ".");
+            // Logger::debug("Sent " + numberToString(sent) + " bytes to socket " + numberToString(fd) + ".");
             user.consumeOutputBuffer(sent);
         }
         else if(sent < 0 && errno == EINTR)
