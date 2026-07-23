@@ -13,6 +13,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SERVER_BINARY = PROJECT_ROOT / "ircserv"
 
 
+class IRCExpectationFailure(AssertionError):
+    """An IRC expectation mismatch with an already formatted diagnostic."""
+
+
 def find_available_port():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("127.0.0.1", 0))
@@ -79,6 +83,25 @@ class IRCServerProcess:
         self._log.seek(position)
         return data
 
+    def output_tail(self, line_count=10):
+        lines = self.output().splitlines()
+
+        if not lines:
+            return "<no server output>"
+
+        tail = lines[-line_count:]
+        omitted = len(lines) - len(tail)
+
+        if omitted > 0:
+            tail.insert(
+                0,
+                "... ({0} earlier server log lines omitted)".format(
+                    omitted
+                ),
+            )
+
+        return "\n".join(tail)
+
     def is_running(self):
         return self.process is not None and self.process.poll() is None
 
@@ -127,15 +150,20 @@ class IRCIntegrationTest(unittest.TestCase):
         try:
             return client.receive_until(expected, timeout)
         except (IRCClientTimeout, ConnectionError) as error:
-            self.fail(
-                "{}\n\nServer output:\n{}".format(
-                    error,
-                    self.server.output(),
-                )
+            message = (
+                "\nIRC expectation failed\n\n"
+                "{0}\n\n"
+                "Server log tail:\n"
+                "{1}"
+            ).format(
+                error,
+                self.server.output_tail(),
             )
+            raise IRCExpectationFailure(message) from None
 
     def assert_server_running(self):
         self.assertTrue(
             self.server.is_running(),
-            "ircserv stopped unexpectedly:\n" + self.server.output(),
+            "ircserv stopped unexpectedly:\n"
+            + self.server.output_tail(),
         )

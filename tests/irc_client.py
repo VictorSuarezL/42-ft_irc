@@ -57,10 +57,10 @@ class IRCClient:
             self.socket.settimeout(remaining)
             try:
                 data = self.socket.recv(4096)
-            except socket.timeout as error:
+            except socket.timeout:
                 raise IRCClientTimeout(
                     "timed out waiting for an IRC line"
-                ) from error
+                ) from None
 
             if not data:
                 raise ConnectionError("the IRC server closed the connection")
@@ -72,29 +72,44 @@ class IRCClient:
     def receive_until(self, expected, timeout=1.0):
         deadline = time.monotonic() + timeout
         received = []
+        failure_reason = "timeout expired"
 
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                raise IRCClientTimeout(
-                    "did not receive {!r}; received: {!r}".format(
-                        expected,
-                        received,
-                    )
-                )
+                break
 
             try:
                 line = self.read_line(remaining)
-            except IRCClientTimeout as error:
-                raise IRCClientTimeout(
-                    "did not receive {!r}; received: {!r}".format(
-                        expected,
-                        received,
-                    )
-                ) from error
+            except (IRCClientTimeout, ConnectionError) as error:
+                failure_reason = str(error)
+                break
+
             received.append(line)
             if expected in line:
                 return received
+
+        if received:
+            received_text = "\n".join(
+                "  {0}. {1!r}".format(index, line)
+                for index, line in enumerate(received, start=1)
+            )
+        else:
+            received_text = "  <nothing>"
+
+        raise IRCClientTimeout(
+            "Expected substring:\n"
+            "  {0!r}\n\n"
+            "Received IRC lines ({1}):\n"
+            "{2}\n\n"
+            "Stopped because:\n"
+            "  {3}".format(
+                expected,
+                len(received),
+                received_text,
+                failure_reason,
+            )
+        ) from None
 
     def drain(self, timeout=0.05):
         received = []
