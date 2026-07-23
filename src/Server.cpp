@@ -466,9 +466,27 @@ void Server::handleJoin(User& user, const Message& msg) {
     return;
 }
 
-void Server::handlePart(const Message& msg) {
+void Server::handlePart(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    // Implement PART command handling logic here
+    if (msg.getArgCount() < 1)
+    {
+        Logger::warning("PART command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        return;
+    }
+    std::string channelName = msg.getArgs()[0];
+    if (_channels.find(channelName) == _channels.end()) {
+        Logger::warning("PART command received for non-existent channel: " + channelName);
+        errorBuilder(user, "ERR_NOSUCHCHANNEL");
+        return;
+    }
+    Channel& channel = _channels[channelName];
+    if (!channel.hasUser(user.getFd())) {
+        Logger::warning("User " + user.getNickname() + " is not in channel " + channelName);
+        errorBuilder(user, "ERR_NOTONCHANNEL");
+        return;
+    }
+    channel.removeUser(user);
 }
 
 void Server::handlePing(User& user, const Message& msg) {
@@ -966,7 +984,7 @@ void Server::dispatchMessage(User& user, const Message& msg) {
         if (cmd == JOIN_STR)
             handleJoin(user, msg);
         else if (cmd == PART_STR)
-            handlePart(msg);
+            handlePart(user, msg);
         else if (cmd == PING_STR)
             handlePing(user, msg);
         else if (cmd == MODE_STR)
