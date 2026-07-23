@@ -41,7 +41,6 @@ class Channel
         bool hasUser(int userFd) const;
         bool isModerated() const;
         void setModerated(bool moderated);
-        bool isOperator(int userFd) const;
     private:
         std::string _name;
         std::string _topic;

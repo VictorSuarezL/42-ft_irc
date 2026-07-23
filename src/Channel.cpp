@@ -156,7 +156,3 @@ bool Channel::isModerated() const {
 void Channel::setModerated(bool moderated) {
     _isModerated = moderated;
 }
-
-bool Channel::isOperator(int userFd) const {
-    return _operators.find(userFd) != _operators.end();
-}
