@@ -55,4 +55,17 @@ inline void toLowerCase(std::string& str) {
     }
 }
 
+inline bool isNumber(const std::string& str)
+{
+    if (str.empty())
+        return false;
+
+    for (std::size_t i = 0; i < str.size(); ++i)
+    {
+        if (!std::isdigit(static_cast<unsigned char>(str[i])))
+            return false;
+    }
+    return true;
+}
+
 #endif

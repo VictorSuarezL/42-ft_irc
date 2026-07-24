@@ -675,8 +675,10 @@ void Server::handleMode(User& user, const Message& msg) {
                             errorBuilder(user, "ERR_NEEDMOREPARAMS");
                             return;
                         }
+                        // Check userLimit is numeric
                         int userLimit = std::atoi(args[2].c_str());
-                        if (userLimit <= 0) {
+
+                        if (userLimit <= 0 || !isNumber(args[2])) {
                             Logger::warning("MODE command received with invalid user limit: " + args[2]);
                             errorBuilder(user, "ERR_INVALIDMODEPARAM");
                             return;
