@@ -59,3 +59,44 @@ class TopicTests(IRCIntegrationTest):
         client.send_command("TOPIC #missing")
 
         self.expect(client, " 403 ")
+
+    def test_topic_restricted_channel_allows_operator_change(self):
+        operator = self.create_channel()
+        regular = self.register_client("bob")
+        self.join_channel(regular, "bob", self.CHANNEL)
+        operator.drain()
+        operator.send_command("MODE " + self.CHANNEL + " +t")
+
+        operator.send_command("TOPIC " + self.CHANNEL + " :New topic")
+
+        self.expect(
+            operator,
+            f":alice!alice@host TOPIC {self.CHANNEL} :New topic",
+        )
+
+    def test_topic_change_broadcasts_to_all_members(self):
+        operator = self.create_channel()
+        bob = self.register_client("bob")
+        charlie = self.register_client("charlie")
+
+        self.join_channel(bob, "bob", self.CHANNEL)
+        self.join_channel(charlie, "charlie", self.CHANNEL)
+
+        operator.drain()
+        bob.drain()
+        charlie.drain()
+
+        operator.send_command("TOPIC " + self.CHANNEL + " :New topic")
+
+        self.expect(
+            operator,
+            f":alice!alice@host TOPIC {self.CHANNEL} :New topic",
+        )
+        self.expect(
+            bob,
+            f":alice!alice@host TOPIC {self.CHANNEL} :New topic",
+        )
+        self.expect(
+            charlie,
+            f":alice!alice@host TOPIC {self.CHANNEL} :New topic",
+        )

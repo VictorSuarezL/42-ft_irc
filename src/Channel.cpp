@@ -6,7 +6,7 @@ Channel::Channel(){
     _inviteOnly = false;
     _topicRestricted = false;
     _channelKey = "";
-    _userLimit = -1;
+    _userLimit = 0;
     _isModerated = false;
 }
 

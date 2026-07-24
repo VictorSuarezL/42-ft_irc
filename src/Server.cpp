@@ -336,7 +336,8 @@ void Server::handleUser(User& user, const Message& msg) {
 void Server::handleJoin(User& user, const Message& msg) {
     bool wasCreated = false;
     Logger::info("Handling command " + msg.getCommand());
-    if (msg.getArgCount() < 1)
+    int msgArgCount = msg.getArgCount();
+    if (msgArgCount < 1)
     {
         Logger::warning("JOIN command received with insufficient arguments.");
         errorBuilder(user, "ERR_NEEDMOREPARAMS");
@@ -376,18 +377,30 @@ void Server::handleJoin(User& user, const Message& msg) {
         errorBuilder(user, "ERR_USERONCHANNEL");
         return;
     }
-
+    // +i
     if (channel.isInviteOnly() && !channel.isInvited(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not invited to join channel " + channelName);
         errorBuilder(user, "ERR_INVITEONLYCHAN");
         return;
     }
+    // +k
+    std::string providedKey;
 
-    if(!channel.getChannelKey().empty() && channel.getChannelKey() != msg.getArgs()[1])
+    if (msgArgCount >= 2)
+        providedKey = msg.getArgs()[1];
+
+    if(!channel.getChannelKey().empty() && providedKey != channel.getChannelKey())
     {
         Logger::warning("User " + user.getNickname() + " provided incorrect channel key for channel " + channelName);
-        errorBuilder(user, "ERR_BADCHANNELKEY");
+        sendToUser(user, ":" + _serverName+ " 475 "+ user.getNickname()+ " "+ channelName+ " :Cannot join channel (+k)");
+        return;
+    }
+    // +l
+    if(channel.isFull())
+    {
+        Logger::warning("User " + user.getNickname() + " cannot join channel " + channelName + " because it is full.");
+        errorBuilder(user, "ERR_CHANNELISFULL");
         return;
     }
 
@@ -528,17 +541,27 @@ void Server::handleMode(User& user, const Message& msg) {
         }
         Channel& channel = _channels[channelName];
         std::string modeString = "+";
+        std::string parameters = "";
+
         if (channel.isInviteOnly())
             modeString += "i";
+
         if (channel.isTopicRestricted())
             modeString += "t";
+
         if (!channel.getChannelKey().empty())
+        {
             modeString += "k";
-        if (channel.getOperatorCount() > 0)
-            modeString += "o";
+            parameters += " " + channel.getChannelKey();
+        }
+
         if (channel.getUserLimit() > 0)
+        {
             modeString += "l";
-        std::string response = ":" + _serverName + " MODE " + channelName + " :" + modeString;
+            parameters += " " + numberToString(channel.getUserLimit());
+        }
+
+        std::string response = ":" + _serverName + " 324 " + user.getNickname() + " " + channelName + " " + modeString + parameters;
         sendToUser(user, response);
         return;    
     }
@@ -563,7 +586,7 @@ void Server::handleMode(User& user, const Message& msg) {
 
         std::string modeChanges = args[1];
         bool adding = true;
-
+        std::string modeChangeMessage = "";
         for (size_t i = 0; i < modeChanges.size(); ++i)
         {            
             char mode = modeChanges[i];
@@ -578,9 +601,15 @@ void Server::handleMode(User& user, const Message& msg) {
             switch (mode) {
                 case 'i':
                     channel.setInviteOnly(adding);
+                    modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " " + (adding ? "+i" : "-i");
+                    broadcastMessage(modeChangeMessage, user.getFd(), target);
+                    sendToUser(user, modeChangeMessage);
                     break;
                 case 't':
                     channel.setTopicRestricted(adding);
+                    modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " TOPIC " + target + " " + (adding ? "+t" : "-t");
+                    broadcastMessage(modeChangeMessage, user.getFd(), target);
+                    sendToUser(user, modeChangeMessage);
                     break;
                 case 'k':
                     if (adding) {
@@ -589,10 +618,16 @@ void Server::handleMode(User& user, const Message& msg) {
                             errorBuilder(user, "ERR_NEEDMOREPARAMS");
                             return;
                         }
-                        channel.setChannelKey(args[2]);
+                        std::string providedKey = args[2];
+                        channel.setChannelKey(providedKey);
+                        modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " +k" + " " + providedKey;
+
                     } else {
                         channel.setChannelKey("");
+                        modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " -k";
                     }
+                    broadcastMessage(modeChangeMessage, user.getFd(), target);
+                    sendToUser(user, modeChangeMessage);
                     break;
                 case 'o': {
                     if (args.size() < 3) {
@@ -628,6 +663,9 @@ void Server::handleMode(User& user, const Message& msg) {
                     } else {
                         channel.removeOperator(_users[targetFd]);
                     }
+                    modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " " + (adding ? "+o" : "-o") + " " + targetNickname;
+                    broadcastMessage(modeChangeMessage, user.getFd(), target);
+                    sendToUser(user, modeChangeMessage);
                     break;
                 }
                 case 'l': {
@@ -647,6 +685,9 @@ void Server::handleMode(User& user, const Message& msg) {
                     } else {
                         channel.setUserLimit(0);
                     }
+                    modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " " + (adding ? "+l" : "-l") + (adding ? " " + args[2] : "");
+                    broadcastMessage(modeChangeMessage, user.getFd(), target);
+                    sendToUser(user, modeChangeMessage);
                     break;
                 }
             default:
@@ -896,6 +937,7 @@ void Server::handleTopic(User& user, const Message& msg) {
     Logger::info("User " + user.getNickname() + " set the topic for channel " + channelName + " to: " + msg.getTrailing());
     std::string topicSetMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " TOPIC " + channelName + " :" + msg.getTrailing();
     broadcastMessage(topicSetMessage, user.getFd(), channelName);
+    sendToUser(user, topicSetMessage);
 }
 
 void Server::handlePrivMsg(User& user, const Message& msg) {

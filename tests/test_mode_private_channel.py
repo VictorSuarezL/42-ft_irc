@@ -6,7 +6,7 @@ class PrivateChannelTests(IRCIntegrationTest):
     def test_key_mode_non_members_cannot_join_without_password(self):
         """ Verifica que un canal privado no permite que los usuarios que no son miembros se unan sin la contraseña correcta. """
         operator = self.register_client("operator")
-        bob = self.register_client("bob")
+        alice = self.register_client("alice")
 
         self.join_channel(operator, "operator", self.CHANNEL)
 
@@ -14,8 +14,8 @@ class PrivateChannelTests(IRCIntegrationTest):
         operator.send_command("PING :mode private set")
         self.expect(operator, "PONG :mode private set")
 
-        bob.send_command("JOIN " + self.CHANNEL)
-        self.expect(bob, ":host 475 bob " + self.CHANNEL + " :Cannot join channel (+k)")
+        alice.send_command("JOIN " + self.CHANNEL)
+        self.expect(alice, ":host 475 alice " + self.CHANNEL + " :Cannot join channel (+k)")
 
     def test_key_mode_join_with_wrong_key_returns_475(self):
         """ Verifica que un canal privado devuelve el código 475 cuando un usuario intenta unirse con una clave incorrecta. """
@@ -133,14 +133,14 @@ class PrivateChannelTests(IRCIntegrationTest):
         self.expect(operator, "PONG :mode private set")
         operator.send_command("MODE " + self.CHANNEL)
 
-        self.expect(operator, "324 operator " + self.CHANNEL + " +k 123pass")
+        self.expect(operator, f":host 324 operator {self.CHANNEL} +k 123pass")
 
     def test_key_mode_change_is_broadcast_to_channel_members(self):
         """ 
         Verifica que un canal privado no notifica a los usuarios que no son miembros
         cuando un nuevo usuario se une al canal.
         """
-        operator = self.register_client("operator")
+        operator = self.register_client("operator", username="username")
         bob = self.register_client("bob")
 
         # self.join_channel(operator, "operator", self.CHANNEL)
@@ -151,7 +151,7 @@ class PrivateChannelTests(IRCIntegrationTest):
         operator.send_command("PING :mode private set")
         self.expect(operator, "PONG :mode private set")
 
-        self.expect(bob, ":operator!operator@host MODE " + self.CHANNEL + " +k 123pass")
+        self.expect(bob, ":operator!username@host MODE " + self.CHANNEL + " +k 123pass")
 
         charlie = self.register_client("charlie")
         charlie.drain()
@@ -162,7 +162,7 @@ class PrivateChannelTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            f":operator!operator@host MODE "
+            f":operator!username@host MODE "
             f"{self.CHANNEL} +k 123pass",
         )
 
@@ -181,7 +181,7 @@ class PrivateChannelTests(IRCIntegrationTest):
         self.expect(operator, "PONG :mode private set")
 
         bob.send_command("JOIN " + self.CHANNEL + " 123pass")
-        self.expect(bob, ":bob!bob@host JOIN :" + self.CHANNEL)
+        self.expect(bob, ":bob!bob@host JOIN " + self.CHANNEL)
 
     def test_non_operator_cannot_set_channel_key(self):
         operator = self.register_client("operator")
