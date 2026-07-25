@@ -203,14 +203,21 @@ class CombinedChannelModeTests(IRCIntegrationTest):
         )
 
         charlie.send_command(f"TOPIC {self.CHANNEL} :forbidden")
-        self.expect(charlie, " 482 ")
+        self.expect(
+            charlie,
+            f":host 482 charlie {self.CHANNEL} "
+            ":You're not channel operator",
+        )
 
     def test_valid_modes_surrounding_unknown_mode_are_still_announced(self):
         operator, members = self.create_channel_with_members("bob")
         bob = members[0]
 
         operator.send_command(f"MODE {self.CHANNEL} +izt")
-        self.expect(operator, " 472 ")
+        self.expect(
+            operator,
+            ":host 472 operator z :is unknown mode char to me",
+        )
 
         self.expect_exact(
             bob,
@@ -246,7 +253,10 @@ class CombinedChannelModeTests(IRCIntegrationTest):
         operator.send_command(
             f"MODE {self.CHANNEL} +ikl secret"
         )
-        self.expect(operator, " 461 ")
+        self.expect(
+            operator,
+            ":host 461 operator MODE :Not enough parameters",
+        )
 
         self.expect_exact(
             bob,

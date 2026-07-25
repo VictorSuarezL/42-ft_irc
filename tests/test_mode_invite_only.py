@@ -15,7 +15,11 @@ class InviteOnlyTests(IRCIntegrationTest):
 
         uninvited.send_command("JOIN " + self.CHANNEL)
 
-        self.expect(uninvited, " 473 ")
+        self.expect(
+            uninvited,
+            ":host 473 uninvited #inviteonly "
+            ":Cannot join channel (+i)",
+        )
 
     def test_invite_only_accepts_invited_user(self):
         operator = self.register_client("operator")
@@ -71,7 +75,11 @@ class InviteOnlyTests(IRCIntegrationTest):
             "MODE " + self.CHANNEL + " +i"
         )
 
-        self.expect(bob, " 482 ")
+        self.expect(
+            bob,
+            ":host 482 bob #inviteonly "
+            ":You're not channel operator",
+        )
 
         # Verifica que el modo no se modificó pese al error.
         charlie.send_command("JOIN " + self.CHANNEL)
@@ -99,7 +107,10 @@ class InviteOnlyTests(IRCIntegrationTest):
         self.expect(operator, "PONG :mode-enabled")
 
         bob.send_command("JOIN " + self.CHANNEL)
-        self.expect(bob, " 473 ")
+        self.expect(
+            bob,
+            ":host 473 bob #inviteonly :Cannot join channel (+i)",
+        )
 
         operator.send_command(
             "MODE " + self.CHANNEL + " -i"

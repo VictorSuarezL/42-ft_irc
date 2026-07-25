@@ -9,14 +9,20 @@ class KickTests(IRCIntegrationTest):
 
         alice.send_command("KICK")
 
-        self.expect(alice, " 461 ")
+        self.expect(
+            alice,
+            ":host 461 alice KICK :Not enough parameters",
+        )
 
     def test_kick_nonexistent_channel_returns_403(self):
         alice = self.register_client("alice")
 
-        alice.send_command("KICK bob #nonexistent")
+        alice.send_command("KICK #nonexistent bob")
 
-        self.expect(alice, " 403 ")
+        self.expect(
+            alice,
+            ":host 403 alice #nonexistent :No such channel",
+        )
 
     def test_kicker_not_in_channel_returns_442(self):
         operator = self.register_client("operator")
@@ -33,7 +39,10 @@ class KickTests(IRCIntegrationTest):
             "KICK " + self.CHANNEL + " bob"
         )
 
-        self.expect(alice, " 442 ")
+        self.expect(
+            alice,
+            ":host 442 alice #general :You're not on that channel",
+        )
 
     def test_kick_from_nooperator_returns_482(self):
         alice = self.register_client("alice")
@@ -43,7 +52,10 @@ class KickTests(IRCIntegrationTest):
 
         bob.send_command("KICK " + self.CHANNEL + " alice")
 
-        self.expect(bob, " 482 ")
+        self.expect(
+            bob,
+            ":host 482 bob #general :You're not channel operator",
+        )
 
     def test_kick_target_not_in_channel_returns_441(self):
         alice = self.register_client("alice")
@@ -52,7 +64,11 @@ class KickTests(IRCIntegrationTest):
 
         alice.send_command("KICK " + self.CHANNEL + " bob")
 
-        self.expect(alice, " 441 ")
+        self.expect(
+            alice,
+            ":host 441 alice bob #general "
+            ":They aren't on that channel",
+        )
 
     def test_kick_broadcasts_to_channel_members(self):
         operator = self.register_client("operator")
@@ -91,7 +107,10 @@ class KickTests(IRCIntegrationTest):
 
         # Alice can no longer send messages to the channel.
         alice.send_command("PRIVMSG " + self.CHANNEL + " :Hello everyone!")
-        self.expect(alice, " 404 ")
+        self.expect(
+            alice,
+            ":host 404 alice #general :Cannot send to channel",
+        )
 
         # KICK did not disconnect Alice from the server.
         alice.send_command("PING :after-kick")

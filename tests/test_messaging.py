@@ -38,7 +38,10 @@ class MessagingTests(IRCIntegrationTest):
 
         alice.send_command("PRIVMSG nobody :Hello")
 
-        self.expect(alice, " 401 ")
+        self.expect(
+            alice,
+            ":host 401 alice nobody :No such nick/channel",
+        )
 
     def test_non_member_cannot_send_to_channel(self):
         alice = self.register_client("alice")
@@ -47,4 +50,7 @@ class MessagingTests(IRCIntegrationTest):
 
         outsider.send_command("PRIVMSG #general :Not allowed")
 
-        self.expect(outsider, " 404 ")
+        self.expect(
+            outsider,
+            ":host 404 outsider #general :Cannot send to channel",
+        )

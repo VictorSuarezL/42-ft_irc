@@ -78,7 +78,11 @@ class ChannelLimitTests(IRCIntegrationTest):
         self.join_channel(bob, "bob", self.CHANNEL)
 
         bob.send_command(f"MODE {self.CHANNEL} +l 2")
-        self.expect(bob, " 482 ")
+        self.expect(
+            bob,
+            f":host 482 bob {self.CHANNEL} "
+            ":You're not channel operator",
+        )
 
         # There are already two users. If Bob's MODE had taken effect,
         # Charlie would receive ERR_CHANNELISFULL.
@@ -89,7 +93,10 @@ class ChannelLimitTests(IRCIntegrationTest):
         bob = self.register_client("bob")
 
         operator.send_command(f"MODE {self.CHANNEL} +l")
-        self.expect(operator, " 461 ")
+        self.expect(
+            operator,
+            ":host 461 operator MODE :Not enough parameters",
+        )
 
         # The failed MODE command must not leave +l enabled.
         self.join_channel(bob, "bob", self.CHANNEL)
@@ -128,7 +135,11 @@ class ChannelLimitTests(IRCIntegrationTest):
         self.enable_limit(operator, 1)
 
         bob.send_command(f"JOIN {self.CHANNEL}")
-        self.expect(bob, " 471 ")
+        self.expect(
+            bob,
+            f":host 471 bob {self.CHANNEL} "
+            ":Cannot join channel (+l)",
+        )
 
         expected = (
             f":operator!operator@host MODE {self.CHANNEL} -l"
@@ -147,7 +158,11 @@ class ChannelLimitTests(IRCIntegrationTest):
         self.enable_limit(operator, 1)
 
         bob.send_command(f"JOIN {self.CHANNEL}")
-        self.expect(bob, " 471 ")
+        self.expect(
+            bob,
+            f":host 471 bob {self.CHANNEL} "
+            ":Cannot join channel (+l)",
+        )
 
         self.enable_limit(operator, 2)
 
@@ -178,7 +193,11 @@ class ChannelLimitTests(IRCIntegrationTest):
         )
 
         david.send_command(f"JOIN {self.CHANNEL}")
-        self.expect(david, " 471 ")
+        self.expect(
+            david,
+            f":host 471 david {self.CHANNEL} "
+            ":Cannot join channel (+l)",
+        )
 
     def test_kick_frees_a_slot_in_limited_channel(self):
         operator = self.create_channel()
@@ -189,7 +208,11 @@ class ChannelLimitTests(IRCIntegrationTest):
         self.join_channel(bob, "bob", self.CHANNEL)
 
         charlie.send_command(f"JOIN {self.CHANNEL}")
-        self.expect(charlie, " 471 ")
+        self.expect(
+            charlie,
+            f":host 471 charlie {self.CHANNEL} "
+            ":Cannot join channel (+l)",
+        )
 
         operator.send_command(f"KICK {self.CHANNEL} bob :freeing slot")
         self.expect(
@@ -249,7 +272,11 @@ class ChannelLimitTests(IRCIntegrationTest):
         )
 
         charlie.send_command(f"JOIN {self.CHANNEL} secret")
-        self.expect(charlie, " 471 ")
+        self.expect(
+            charlie,
+            f":host 471 charlie {self.CHANNEL} "
+            ":Cannot join channel (+l)",
+        )
 
     def test_combined_lk_modes_consume_parameters_in_order(self):
         operator = self.create_channel()
@@ -278,4 +305,8 @@ class ChannelLimitTests(IRCIntegrationTest):
         )
 
         charlie.send_command(f"JOIN {self.CHANNEL} secret")
-        self.expect(charlie, " 471 ")
+        self.expect(
+            charlie,
+            f":host 471 charlie {self.CHANNEL} "
+            ":Cannot join channel (+l)",
+        )

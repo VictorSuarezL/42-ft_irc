@@ -56,7 +56,10 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +k"
         )
 
-        self.expect(operator, " 461 ")
+        self.expect(
+            operator,
+            ":host 461 operator MODE :Not enough parameters",
+        )
         self.assert_server_running()
 
         bob.send_command(f"JOIN {self.CHANNEL}")
@@ -86,7 +89,11 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +k secret"
         )
 
-        self.expect(bob, " 482 ")
+        self.expect(
+            bob,
+            f":host 482 bob {self.CHANNEL} "
+            ":You're not channel operator",
+        )
         self.assert_server_running()
 
     def test_key_mode_removing_key_allows_join_without_key(self):
@@ -107,7 +114,11 @@ class PrivateChannelTests(IRCIntegrationTest):
         self.expect(operator, "PONG :key-set")
 
         bob.send_command(f"JOIN {self.CHANNEL}")
-        self.expect(bob, " 475 ")
+        self.expect(
+            bob,
+            f":host 475 bob {self.CHANNEL} "
+            ":Cannot join channel (+k)",
+        )
 
         operator.send_command(
             f"MODE {self.CHANNEL} -k 123pass"
@@ -203,7 +214,11 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +k secret"
         )
 
-        self.expect(bob, " 482 ")
+        self.expect(
+            bob,
+            f":host 482 bob {self.CHANNEL} "
+            ":You're not channel operator",
+        )
 
         charlie.send_command(f"JOIN {self.CHANNEL}")
 
@@ -229,7 +244,11 @@ class PrivateChannelTests(IRCIntegrationTest):
         self.expect(operator, "PONG :key-set")
 
         bob.send_command(f"JOIN {self.CHANNEL}")
-        self.expect(bob, " 475 ")
+        self.expect(
+            bob,
+            f":host 475 bob {self.CHANNEL} "
+            ":Cannot join channel (+k)",
+        )
 
         operator.send_command(
             f"MODE {self.CHANNEL} -k 123pass"
@@ -263,7 +282,11 @@ class PrivateChannelTests(IRCIntegrationTest):
         bob.send_command(
             f"JOIN {self.CHANNEL} wrong-key"
         )
-        self.expect(bob, " 475 ")
+        self.expect(
+            bob,
+            f":host 475 bob {self.CHANNEL} "
+            ":Cannot join channel (+k)",
+        )
 
         bob.send_command(
             f"JOIN {self.CHANNEL} correct-key"
@@ -299,7 +322,11 @@ class PrivateChannelTests(IRCIntegrationTest):
         )
 
         bob.send_command(f"JOIN {self.CHANNEL}")
-        self.expect(bob, " 475 ")
+        self.expect(
+            bob,
+            f":host 475 bob {self.CHANNEL} "
+            ":Cannot join channel (+k)",
+        )
 
         bob.send_command(
             f"JOIN {self.CHANNEL} secret"

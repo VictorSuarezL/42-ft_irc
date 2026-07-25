@@ -51,14 +51,20 @@ class TopicTests(IRCIntegrationTest):
 
         regular.send_command("TOPIC " + self.CHANNEL + " :Forbidden")
 
-        self.expect(regular, " 482 ")
+        self.expect(
+            regular,
+            ":host 482 bob #general :You're not channel operator",
+        )
 
     def test_topic_for_unknown_channel_returns_403(self):
         client = self.register_client("alice")
 
         client.send_command("TOPIC #missing")
 
-        self.expect(client, " 403 ")
+        self.expect(
+            client,
+            ":host 403 alice #missing :No such channel",
+        )
 
     def test_topic_restricted_channel_allows_operator_change(self):
         operator = self.create_channel()

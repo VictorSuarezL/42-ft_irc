@@ -15,14 +15,14 @@ class RegistrationTests(IRCIntegrationTest):
 
         client.send_command("PASS wrongpassword")
 
-        self.expect(client, " 464 ")
+        self.expect(client, ":host 464 * :Password incorrect")
 
     def test_command_before_registration_returns_451(self):
         client = self.new_client()
 
         client.send_command("JOIN #general")
 
-        self.expect(client, " 451 ")
+        self.expect(client, ":host 451 * :You have not registered")
 
     def test_duplicate_nickname_returns_433(self):
         self.register_client("alice")
@@ -31,7 +31,10 @@ class RegistrationTests(IRCIntegrationTest):
 
         second.send_command("NICK alice")
 
-        self.expect(second, " 433 ")
+        self.expect(
+            second,
+            ":host 433 * alice :Nickname is already in use",
+        )
 
     def test_registration_commands_can_arrive_in_one_packet(self):
         client = self.new_client()
