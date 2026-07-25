@@ -131,25 +131,25 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(bob, f":bob!bob@host JOIN {self.CHANNEL}")
 
-    # def test_invitation_is_removed_after_user_joins(self):
-    #     alice = self.register_client("alice")
-    #     bob = self.register_client("bob")
+    def test_invitation_is_removed_after_user_joins(self):
+        alice = self.register_client("alice")
+        bob = self.register_client("bob")
 
-    #     self.join_channel(alice, "alice", self.CHANNEL)
+        self.join_channel(alice, "alice", self.CHANNEL)
 
-    #     alice.send_command("MODE " + self.CHANNEL + " +i")
+        alice.send_command("MODE " + self.CHANNEL + " +i")
 
-    #     alice.send_command("INVITE bob " + self.CHANNEL)
+        alice.send_command("INVITE bob " + self.CHANNEL)
 
-    #     bob.send_command("JOIN " + self.CHANNEL)
+        bob.send_command("JOIN " + self.CHANNEL)
 
-    #     self.expect(bob, f":bob!bob@host JOIN {self.CHANNEL}")
+        self.expect(bob, f":bob!bob@host JOIN {self.CHANNEL}")
 
-    #     bob.send_command("PART " + self.CHANNEL)
+        bob.send_command("PART " + self.CHANNEL)
 
-    #     bob.send_command("JOIN " + self.CHANNEL)
+        bob.send_command("JOIN " + self.CHANNEL)
 
-    #     self.expect(
-    #         bob,
-    #         ":host 473 bob #general :Cannot join channel (+i)",
-    #     )
+        self.expect(
+            bob,
+            ":host 473 bob #general :Cannot join channel (+i)",
+        )

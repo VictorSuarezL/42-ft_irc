@@ -522,8 +522,6 @@ void Server::handlePing(User& user, const Message& msg) {
     sendToUser(user, "PONG :" + pongResponse);
 }
 
-// TODO - Refactor this handleMode
-// TODO - Make sure it works as expected
 void Server::handleMode(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
     if (msg.getArgCount() < 1)
@@ -875,7 +873,7 @@ void Server::handleInvite(User &user, const Message& msg) {
     if(channel.hasUser(targetUser->getFd()))
     {
         Logger::warning("User " + targetNickname + " is already in channel " + channelName + " and cannot be invited.");
-        errorBuilder(user, "ERR_USERONCHANNEL", user.getNickname() + " " + channelName);
+        errorBuilder(user, "ERR_USERONCHANNEL", targetNickname + " " + channelName);
         return;
     }
 
