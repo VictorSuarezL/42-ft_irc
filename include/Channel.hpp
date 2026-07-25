@@ -22,6 +22,7 @@ class Channel
         void removeOperator(const User& user);
         std::set<int> getOperators() const;
         int getOperatorCount() const;
+        bool isOperator(int userFd) const;
         void inviteUser(const User& user);
         void removeInvite(const User& user);
         std::set<int> getInvitedUsers() const;
@@ -40,7 +41,6 @@ class Channel
         bool hasUser(int userFd) const;
         bool isModerated() const;
         void setModerated(bool moderated);
-        bool isOperator(int userFd) const;
     private:
         std::string _name;
         std::string _topic;
