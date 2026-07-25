@@ -282,7 +282,7 @@ void Server::handlePass(User& user, const Message& msg) {
     if (msg.getArgCount() < 1)
     {
         Logger::warning("PASS command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
 
@@ -304,14 +304,14 @@ void Server::handleNick(User& user, const Message& msg) {
     if (msg.getArgCount() < 1)
     {
         Logger::warning("NICK command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
     std::string nickname = msg.getArgs()[0];
     // Check if the nickname is already in use
     if (isNicknameInUse(nickname)) {
         Logger::warning("NICK command received with a nickname that is already in use: " + nickname);
-        errorBuilder(user, "ERR_NICKNAMEINUSE");
+        errorBuilder(user, "ERR_NICKNAMEINUSE", nickname);
         return;
     } else {
         Logger::debug("Received nickname: " + nickname + " for user on socket " + numberToString(user.getFd()));
@@ -325,7 +325,7 @@ void Server::handleUser(User& user, const Message& msg) {
     if (msg.getArgCount() < 1)
     {
         Logger::warning("USER command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
     std::string username = msg.getArgs()[0];
@@ -340,7 +340,7 @@ void Server::handleJoin(User& user, const Message& msg) {
     if (msgArgCount < 1)
     {
         Logger::warning("JOIN command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
     // Implement JOIN command handling logic here
@@ -356,7 +356,7 @@ void Server::handleJoin(User& user, const Message& msg) {
         || channelName.find('\n') != std::string::npos)
     {
         Logger::warning("Invalid channel name: " + channelName);
-        errorBuilder(user, "ERR_BADCHANMASK");
+        errorBuilder(user, "ERR_BADCHANMASK", channelName);
         return;
         
     } 
@@ -374,14 +374,14 @@ void Server::handleJoin(User& user, const Message& msg) {
     if(channel.hasUser(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is already in channel " + channelName);
-        errorBuilder(user, "ERR_USERONCHANNEL");
+        errorBuilder(user, "ERR_USERONCHANNEL", user.getNickname() + " " + channelName);
         return;
     }
     // +i
     if (channel.isInviteOnly() && !channel.isInvited(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not invited to join channel " + channelName);
-        errorBuilder(user, "ERR_INVITEONLYCHAN");
+        errorBuilder(user, "ERR_INVITEONLYCHAN", channelName);
         return;
     }
     // +k
@@ -400,14 +400,14 @@ void Server::handleJoin(User& user, const Message& msg) {
     if(channel.isFull())
     {
         Logger::warning("User " + user.getNickname() + " cannot join channel " + channelName + " because it is full.");
-        errorBuilder(user, "ERR_CHANNELISFULL");
+        errorBuilder(user, "ERR_CHANNELISFULL", channelName);
         return;
     }
 
     if(!channel.addUser(user.getFd()))
     {
         Logger::warning("Failed to add user " + user.getNickname() + " to channel " + channelName + " because the channel is full.");
-        errorBuilder(user, "ERR_CHANNELISFULL");
+        errorBuilder(user, "ERR_CHANNELISFULL", channelName);
         return;
     }
     Logger::info("User " + user.getNickname() + " joined channel " + channelName);
@@ -439,7 +439,7 @@ void Server::handleJoin(User& user, const Message& msg) {
         if(!channel.addOperator(user.getFd()))
         {
         Logger::warning("Failed to add user " + user.getNickname() + " as operator to channel " + channelName);
-        errorBuilder(user, "ERR_CHANNELISFULL");
+        errorBuilder(user, "ERR_CHANNELISFULL", channelName);
         return;
         }
         Logger::info("User " + user.getNickname() + " is now an operator in channel " + channelName);
@@ -507,7 +507,7 @@ void Server::handlePing(User& user, const Message& msg) {
     if ((msg.getArgCount() + (msg.getTrailing().empty() ? 0 : 1)) < 1)
     {
         Logger::warning("PING command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
 
@@ -529,14 +529,14 @@ void Server::handleMode(User& user, const Message& msg) {
     if (msg.getArgCount() < 1)
     {
         Logger::warning("MODE command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
     if (msg.getArgCount() == 1) {
         std::string channelName = msg.getArgs()[0];
         if (_channels.find(channelName) == _channels.end()) {
             Logger::warning("MODE command received for non-existent channel: " + channelName);
-            errorBuilder(user, "ERR_NOSUCHCHANNEL");
+            errorBuilder(user, "ERR_NOSUCHCHANNEL", channelName);
             return;
         }
         Channel& channel = _channels[channelName];
@@ -572,15 +572,16 @@ void Server::handleMode(User& user, const Message& msg) {
     if (target[0] == '#') {
         if (_channels.find(target) == _channels.end()) {
             Logger::warning("MODE command received for non-existent channel: " + target);
-            errorBuilder(user, "ERR_NOSUCHCHANNEL");
+            errorBuilder(user, "ERR_NOSUCHCHANNEL", target);
             return;
         }
 
         Channel& channel = _channels[target];
+        std::string channelName = channel.getName();
 
         if (!channel.hasUser(user.getFd()) || !channel.isOperator(user.getFd())) {
             Logger::warning("User " + user.getNickname() + " tried to change channel mode without operator privileges on " + target);
-            errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+            errorBuilder(user, "ERR_CHANOPRIVSNEEDED", channelName);
             return;
         }
 
@@ -615,7 +616,7 @@ void Server::handleMode(User& user, const Message& msg) {
                     if (adding) {
                         if (args.size() < 3) {
                             Logger::warning("MODE command received with insufficient arguments for +k mode.");
-                            errorBuilder(user, "ERR_NEEDMOREPARAMS");
+                            errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
                             return;
                         }
                         std::string providedKey = args[2];
@@ -632,7 +633,7 @@ void Server::handleMode(User& user, const Message& msg) {
                 case 'o': {
                     if (args.size() < 3) {
                         Logger::warning("MODE command received with insufficient arguments for +o/-o mode.");
-                        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+                        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
                         return;
                     }
 
@@ -648,13 +649,13 @@ void Server::handleMode(User& user, const Message& msg) {
 
                     if (targetFd == -1) {
                         Logger::warning("MODE command received with non-existent user: " + targetNickname);
-                        errorBuilder(user, "ERR_NOSUCHNICK");
+                        errorBuilder(user, "ERR_NOSUCHNICK", targetNickname);
                         return;
                     }
 
                     if (!channel.hasUser(targetFd)) {
                         Logger::warning("MODE command received for user not in channel: " + targetNickname);
-                        errorBuilder(user, "ERR_USERNOTINCHANNEL");
+                        errorBuilder(user, "ERR_USERNOTINCHANNEL", targetNickname + " " + channelName);
                         return;
                     }
 
@@ -672,7 +673,7 @@ void Server::handleMode(User& user, const Message& msg) {
                     if (adding) {
                         if (args.size() < 3) {
                             Logger::warning("MODE command received with insufficient arguments for +l mode.");
-                            errorBuilder(user, "ERR_NEEDMOREPARAMS");
+                            errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
                             return;
                         }
                         // Check userLimit is numeric
@@ -694,7 +695,7 @@ void Server::handleMode(User& user, const Message& msg) {
                 }
             default:
                 Logger::warning("MODE command received with unknown mode: " + std::string(1, mode));
-                errorBuilder(user, "ERR_UNKNOWNMODE");
+                errorBuilder(user, "ERR_UNKNOWNMODE", std::string(1, mode));
                 return;
             }
         }
@@ -712,7 +713,7 @@ void Server::handleKick(User &user, const Message& msg) {
     if(msg.getArgCount() < 2)
     {
         Logger::warning("KICK command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
 
@@ -724,7 +725,7 @@ void Server::handleKick(User &user, const Message& msg) {
     if(channelIt == _channels.end())
     {
         Logger::warning("KICK command received for non-existent channel: " + channelName);
-        errorBuilder(user, "ERR_NOSUCHCHANNEL");
+        errorBuilder(user, "ERR_NOSUCHCHANNEL", channelName);
         return;
     }
     
@@ -732,7 +733,7 @@ void Server::handleKick(User &user, const Message& msg) {
     if(!targetUser)
     {
         Logger::warning("KICK command received for non-existent user: " + targetNickname);
-        errorBuilder(user, "ERR_NOSUCHNICK");
+        errorBuilder(user, "ERR_NOSUCHNICK",targetNickname);
         return;
     }
     
@@ -741,21 +742,21 @@ void Server::handleKick(User &user, const Message& msg) {
     if(!channel.hasUser(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not in channel " + channelName + " and cannot invite others.");
-        errorBuilder(user, "ERR_NOTONCHANNEL");
+        errorBuilder(user, "ERR_NOTONCHANNEL", channelName);
         return;
     }
 
     if(!channel.isOperator(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot invite others.");
-        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+        errorBuilder(user, "ERR_CHANOPRIVSNEEDED", channelName);
         return;
     }
 
     if(!channel.hasUser(targetUser->getFd()))
     {
         Logger::warning("User " + targetNickname + " is not in channel " + channelName + " and cannot be invited.");
-        errorBuilder(user, "ERR_USERNOTINCHANNEL");
+        errorBuilder(user, "ERR_USERNOTINCHANNEL", targetNickname + " " + channelName);
         return;
     }
 
@@ -806,7 +807,7 @@ void Server::handleInvite(User &user, const Message& msg) {
     if(msg.getArgCount() < 2)
     {
         Logger::warning("INVITE command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
 
@@ -818,7 +819,7 @@ void Server::handleInvite(User &user, const Message& msg) {
     if(channelIt == _channels.end())
     {
         Logger::warning("INVITE command received for non-existent channel: " + channelName);
-        errorBuilder(user, "ERR_NOSUCHCHANNEL");
+        errorBuilder(user, "ERR_NOSUCHCHANNEL", channelName);
         return;
     }
     
@@ -826,7 +827,7 @@ void Server::handleInvite(User &user, const Message& msg) {
     if(!targetUser)
     {
         Logger::warning("INVITE command received for non-existent user: " + targetNickname);
-        errorBuilder(user, "ERR_NOSUCHNICK");
+        errorBuilder(user, "ERR_NOSUCHNICK",targetNickname);
         return;
     }
 
@@ -835,21 +836,21 @@ void Server::handleInvite(User &user, const Message& msg) {
     if(!channel.hasUser(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not in channel " + channelName + " and cannot invite others.");
-        errorBuilder(user, "ERR_NOTONCHANNEL");
+        errorBuilder(user, "ERR_NOTONCHANNEL", channelName);
         return;
     }
 
     if(!channel.isOperator(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot invite others.");
-        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+        errorBuilder(user, "ERR_CHANOPRIVSNEEDED", channelName);
         return;
     }
 
     if(channel.hasUser(targetUser->getFd()))
     {
         Logger::warning("User " + targetNickname + " is already in channel " + channelName + " and cannot be invited.");
-        errorBuilder(user, "ERR_USERONCHANNEL");
+        errorBuilder(user, "ERR_USERONCHANNEL", user.getNickname() + " " + channelName);
         return;
     }
 
@@ -885,7 +886,7 @@ void Server::handleTopic(User& user, const Message& msg) {
     if (msg.getArgCount() < 1) 
     {
         Logger::warning("TOPIC command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
     // Check if the channel exists
@@ -893,7 +894,7 @@ void Server::handleTopic(User& user, const Message& msg) {
     if (_channels.find(channelName) == _channels.end()) 
     {
         Logger::warning("TOPIC command received for non-existent channel: " + channelName);
-        errorBuilder(user, "ERR_NOSUCHCHANNEL");
+        errorBuilder(user, "ERR_NOSUCHCHANNEL", channelName);
         return;
     }
     // Check if the user is in the channel
@@ -901,14 +902,14 @@ void Server::handleTopic(User& user, const Message& msg) {
     if (!channel.hasUser(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not in channel "+ channelName + " and cannot set the topic.");
-        errorBuilder(user, "ERR_NOTONCHANNEL");
+        errorBuilder(user, "ERR_NOTONCHANNEL", channelName);
         return;
     }
     // Check if the user is an operator if the channel is topic restricted
     if (channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot set the topic.");
-        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+        errorBuilder(user, "ERR_CHANOPRIVSNEEDED", channelName);
         return;
     }
     // If the message does not have a trailing part, return the current topic
@@ -931,7 +932,7 @@ void Server::handleTopic(User& user, const Message& msg) {
     if(channel.isTopicRestricted() && !channel.isOperator(user.getFd()))
     {
         Logger::warning("User " + user.getNickname() + " is not an operator in channel " + channelName + " and cannot set the topic.");
-        errorBuilder(user, "ERR_CHANOPRIVSNEEDED");
+        errorBuilder(user, "ERR_CHANOPRIVSNEEDED", channelName);
         return;
     }
     // Set the topic for the channel
@@ -948,7 +949,7 @@ void Server::handlePrivMsg(User& user, const Message& msg) {
     if (msg.getArgCount() < 1)
     {
         Logger::warning("PRIVMSG command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
     std::string target = msg.getArgs()[0];
@@ -962,20 +963,20 @@ void Server::handlePrivMsg(User& user, const Message& msg) {
         if(_channels.find(target) == _channels.end())
         {
             Logger::warning("PRIVMSG command received for non-existent channel: " + target);
-            errorBuilder(user, "ERR_NOSUCHCHANNEL");
+            errorBuilder(user, "ERR_NOSUCHCHANNEL", target);
             return;
         }
         Channel& channel = _channels[target];
         if (!channel.hasUser(user.getFd()))
         {
             Logger::warning("User " + user.getNickname() + " is not in channel " + target + " and cannot send messages to it.");
-            errorBuilder(user, "ERR_CANNOTSENDTOCHAN");
+            errorBuilder(user, "ERR_CANNOTSENDTOCHAN", target);
             return;
         }
         if(channel.isModerated() && !channel.isOperator(user.getFd()))
         {
             Logger::warning("User " + user.getNickname() + " is not an operator in moderated channel " + target + " and cannot send messages to it.");
-            errorBuilder(user, "ERR_CANNOTSENDTOCHAN");
+            errorBuilder(user, "ERR_CANNOTSENDTOCHAN", target);
             return;
         }
         std::string formattedMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " PRIVMSG " + target + " :" + message;
@@ -985,7 +986,7 @@ void Server::handlePrivMsg(User& user, const Message& msg) {
         if(!isNicknameInUse(target))
         {
             Logger::warning("PRIVMSG command received for non-existent user: " + target);
-            errorBuilder(user, "ERR_NOSUCHNICK");
+            errorBuilder(user, "ERR_NOSUCHNICK",target);
             return;
         }
         std::string formattedMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " PRIVMSG " + target + " :" + message;
@@ -993,7 +994,7 @@ void Server::handlePrivMsg(User& user, const Message& msg) {
         if(targetUser == NULL)
         {
             Logger::warning("PRIVMSG command received for non-existent user: " + target);
-            errorBuilder(user, "ERR_NOSUCHNICK");
+            errorBuilder(user, "ERR_NOSUCHNICK",target);
             return;
         }
         sendToUser(*targetUser, formattedMessage);
@@ -1082,11 +1083,23 @@ void Server::enablePollOut(int fd)
     }
 }
 
-void Server::errorBuilder(User& user, const std::string& errorCode) {
+void Server::errorBuilder(User& user, const std::string& errorCode, const std::string& parameters) 
+{
     std::pair<int, std::string> errorMessage = getErrorMessage(errorCode);
-    int errorCodeInt = errorMessage.first;
-    const std::string& errorMessageStr = errorMessage.second;
-    std::string response = ":" + _serverName + " " + numberToString(errorCodeInt) + " " + user.getNickname() + " " + errorMessageStr;
+    std::string recipient = user.getNickname();
+
+    if(recipient.empty())
+        recipient = "*";
+
+    // int errorCodeInt = errorMessage.first;
+    // const std::string& errorMessageStr = errorMessage.second;
+    std::string response = ":" + _serverName + " " + numberToString(errorMessage.first) + " " + recipient;
+
+    if(!parameters.empty())
+        response += " " + parameters;
+    
+    response += " " + errorMessage.second;
+
     sendToUser(user, response);
 }
 
