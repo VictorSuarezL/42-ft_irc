@@ -569,7 +569,8 @@ void Server::handleMode(User& user, const Message& msg) {
     std::vector<std::string> args = msg.getArgs();
     std::string target = args[0];
 
-    if (target[0] == '#') {
+    if (target[0] == '#') 
+    {
         if (_channels.find(target) == _channels.end()) {
             Logger::warning("MODE command received for non-existent channel: " + target);
             errorBuilder(user, "ERR_NOSUCHCHANNEL", target);
@@ -587,7 +588,12 @@ void Server::handleMode(User& user, const Message& msg) {
 
         std::string modeChanges = args[1];
         bool adding = true;
-        std::string modeChangeMessage = "";
+        std::string appliedModes = "";
+        std::string appliedParameters = "";
+        size_t parameterIndex = 2;
+        char currentSign;
+        char lastSign;
+
         for (size_t i = 0; i < modeChanges.size(); ++i)
         {            
             char mode = modeChanges[i];
@@ -598,46 +604,48 @@ void Server::handleMode(User& user, const Message& msg) {
                 adding = false;
                 continue;
             }
+            currentSign = adding ? '+' : '-';
+
+            if (lastSign != currentSign) {
+                appliedModes += currentSign;
+                lastSign = currentSign;
+            }
 
             switch (mode) {
                 case 'i':
                     channel.setInviteOnly(adding);
-                    modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " " + (adding ? "+i" : "-i");
-                    broadcastMessage(modeChangeMessage, user.getFd(), target);
-                    sendToUser(user, modeChangeMessage);
+                    appliedModes += mode;
                     break;
                 case 't':
                     channel.setTopicRestricted(adding);
-                    modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " TOPIC " + target + " " + (adding ? "+t" : "-t");
-                    broadcastMessage(modeChangeMessage, user.getFd(), target);
-                    sendToUser(user, modeChangeMessage);
+                    appliedModes += mode;
                     break;
                 case 'k':
                     if (adding) {
-                        if (args.size() < 3) {
+                        if (args.size() < parameterIndex + 1) {
                             Logger::warning("MODE command received with insufficient arguments for +k mode.");
                             errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
-                            return;
+                            continue;
                         }
-                        std::string providedKey = args[2];
+                        std::string providedKey = args[parameterIndex++];
                         channel.setChannelKey(providedKey);
-                        modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " +k" + " " + providedKey;
-
-                    } else {
-                        channel.setChannelKey("");
-                        modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " -k";
-                    }
-                    broadcastMessage(modeChangeMessage, user.getFd(), target);
-                    sendToUser(user, modeChangeMessage);
+                        if (!appliedParameters.empty())
+                            appliedParameters += " ";
+                            appliedParameters += providedKey;
+                        } else {
+                            channel.setChannelKey("");
+                        }
+                        
+                        appliedModes += mode;
                     break;
                 case 'o': {
-                    if (args.size() < 3) {
+                    if (args.size() < parameterIndex + 1) {
                         Logger::warning("MODE command received with insufficient arguments for +o/-o mode.");
                         errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
-                        return;
+                        continue;
                     }
 
-                    std::string targetNickname = args[2];
+                    std::string targetNickname = args[parameterIndex++];
                     int targetFd = -1;
 
                     for (std::map<int, User>::iterator it = _users.begin(); it != _users.end(); ++it) {
@@ -650,13 +658,13 @@ void Server::handleMode(User& user, const Message& msg) {
                     if (targetFd == -1) {
                         Logger::warning("MODE command received with non-existent user: " + targetNickname);
                         errorBuilder(user, "ERR_NOSUCHNICK", targetNickname);
-                        return;
+                        continue;
                     }
 
                     if (!channel.hasUser(targetFd)) {
                         Logger::warning("MODE command received for user not in channel: " + targetNickname);
                         errorBuilder(user, "ERR_USERNOTINCHANNEL", targetNickname + " " + channelName);
-                        return;
+                        continue;
                     }
 
                     if (adding) {
@@ -664,42 +672,59 @@ void Server::handleMode(User& user, const Message& msg) {
                     } else {
                         channel.removeOperator(_users[targetFd]);
                     }
-                    modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " " + (adding ? "+o" : "-o") + " " + targetNickname;
-                    broadcastMessage(modeChangeMessage, user.getFd(), target);
-                    sendToUser(user, modeChangeMessage);
+                    if (!appliedParameters.empty())
+                        appliedParameters += " ";
+                    appliedParameters += targetNickname;
+                    appliedModes += mode;
                     break;
                 }
                 case 'l': {
                     if (adding) {
-                        if (args.size() < 3) {
+                        if (args.size() < parameterIndex + 1) {
                             Logger::warning("MODE command received with insufficient arguments for +l mode.");
                             errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
-                            return;
+                            continue;
                         }
                         // Check userLimit is numeric
-                        int userLimit = std::atoi(args[2].c_str());
+                        std::string parameter = args[parameterIndex++];
+                        int userLimit = std::atoi(parameter.c_str());
 
-                        if (userLimit <= 0 || !isNumber(args[2])) {
-                            Logger::warning("MODE command received with invalid user limit: " + args[2]);
+                        if (userLimit <= 0 || !isNumber(parameter)) {
+                            Logger::warning("MODE command received with invalid user limit: " + parameter);
                             errorBuilder(user, "ERR_INVALIDMODEPARAM");
-                            return;
+                            continue;
                         }
                         channel.setUserLimit(userLimit);
+                        if (!appliedParameters.empty())
+                            appliedParameters += " ";
+                        appliedParameters += parameter;
                     } else {
                         channel.setUserLimit(0);
                     }
-                    modeChangeMessage = ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " MODE " + target + " " + (adding ? "+l" : "-l") + (adding ? " " + args[2] : "");
-                    broadcastMessage(modeChangeMessage, user.getFd(), target);
-                    sendToUser(user, modeChangeMessage);
+                    appliedModes += mode;
                     break;
                 }
             default:
                 Logger::warning("MODE command received with unknown mode: " + std::string(1, mode));
                 errorBuilder(user, "ERR_UNKNOWNMODE", std::string(1, mode));
-                return;
+                continue;
             }
         }
+        if (!appliedModes.empty()) 
+        {
+            std::string modeMessage =
+                ":" + user.getNickname() +
+                "!" + user.getUsername() +
+                "@" + _serverName +
+                " MODE " + target +
+                " " + appliedModes;
 
+            if (!appliedParameters.empty())
+                modeMessage += " " + appliedParameters;
+
+            broadcastMessage(modeMessage, user.getFd(), target);
+            sendToUser(user, modeMessage);
+        }
     } else {
         Logger::warning("User mode changes are not supported yet.");
         errorBuilder(user, "ERR_UMODEUNKNOWNFLAG");
