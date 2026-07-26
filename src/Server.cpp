@@ -481,25 +481,110 @@ void Server::handleJoin(User& user, const Message& msg) {
 
 void Server::handlePart(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    if (msg.getArgCount() < 1)
+    int argSize = msg.getArgCount();
+    
+    if (argSize < 1)
     {
         Logger::warning("PART command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
         return;
     }
-    std::string channelName = msg.getArgs()[0];
-    if (_channels.find(channelName) == _channels.end()) {
-        Logger::warning("PART command received for non-existent channel: " + channelName);
-        errorBuilder(user, "ERR_NOSUCHCHANNEL");
-        return;
+    
+    std::string nickname = user.getNickname();
+    std::string channelList = msg.getArgs()[0];
+    size_t start = 0;
+    std::string reason = "";
+    
+    if(msg.hasTrailing())
+        reason = msg.getTrailing();
+    else if(msg.getArgCount() >= 2)
+        reason = msg.getArgs()[1];
+    else
+        reason = nickname;
+
+    while (start < channelList.size())
+    {
+        size_t comma = channelList.find(',', start);
+        std::string channelName;
+
+        if (comma == std::string::npos)
+        {
+            channelName = channelList.substr(start);
+            start = channelList.size();
+        }
+        else
+        {
+            channelName = channelList.substr(
+                start,
+                comma - start
+            );
+            start = comma + 1;
+        }
+
+        Logger::debug("channelName = " + channelName);
+
+        if (_channels.find(channelName) == _channels.end())
+        {
+            Logger::warning(
+                "PART command received for non-existent channel: "
+                + channelName
+            );
+            errorBuilder(
+                user,
+                "ERR_NOSUCHCHANNEL",
+                channelName
+            );
+            continue;
+        }
+
+        Channel& channel = _channels[channelName];
+
+        if (!channel.hasUser(user.getFd()))
+        {
+            Logger::warning(
+                "User " + nickname
+                + " is not in channel " + channelName
+            );
+            errorBuilder(
+                user,
+                "ERR_NOTONCHANNEL",
+                channelName
+            );
+            continue;
+        }
+
+        Logger::debug(
+            "PART command received with channel: " + channelName
+        );
+        if(channel.isOperator(user.getFd()))
+        {
+            channel.removeOperator(user);
+            Logger::info("User " + nickname + " was an operator in channel " + channelName + " and has been removed from the operator list.");
+        }
+        
+        if(channel.isInvited(user.getFd()))
+        {
+            channel.removeInvite(user);
+            Logger::info("User " + nickname + " was invited to channel " + channelName + " and has now been kicked.");
+        }
+
+        channel.removeUser(user);
+        std::string response =
+                ":" + user.getNickname() +
+                "!" + user.getUsername() +
+                "@" + _serverName +
+                " PART " + channelName +
+                " :" + reason;
+
+        broadcastMessage(response, user.getFd(), channelName);
+        sendToUser(user, response);
+
+        if (channel.getUserCount() == 0)
+        {
+            Logger::info("Channel " + channelName + " is empty, removing it");
+            _channels.erase(channelName);
+        }
     }
-    Channel& channel = _channels[channelName];
-    if (!channel.hasUser(user.getFd())) {
-        Logger::warning("User " + user.getNickname() + " is not in channel " + channelName);
-        errorBuilder(user, "ERR_NOTONCHANNEL");
-        return;
-    }
-    channel.removeUser(user);
 }
 
 void Server::handlePing(User& user, const Message& msg) {
@@ -792,7 +877,6 @@ void Server::handleKick(User &user, const Message& msg) {
     else
         reason = user.getNickname();
 
-    channel.removeUser(*targetUser);
     Logger::info("User " + user.getNickname() + " kicked " + targetNickname + " from channel " + channelName + " for reason: " + reason);
     
     std::string notification =
@@ -879,6 +963,8 @@ void Server::handleInvite(User &user, const Message& msg) {
 
     channel.inviteUser(*targetUser);
     Logger::info("User " + user.getNickname() + " invited " + targetNickname + " to channel " + channelName);
+
+    // TODO - Remove user from invitation list
     
     std::string confirmation =
         ":" + _serverName
@@ -1038,17 +1124,6 @@ void Server::dispatchMessage(User& user, const Message& msg) {
         cmd.erase(cmd.size() - 1);
     toLowerCase(cmd);
 
-    // if (!user.isRegistered() 
-    //     && cmd != PASS_STR 
-    //     && cmd != NICK_STR 
-    //     && cmd != USER_STR 
-    //     && cmd != PING_STR)
-    // {
-    //     Logger::warning("User on socket " + numberToString(user.getFd()) + " is not registered and sent command: " + cmd);
-    //     // Send an error message back to the user here
-    //     sendToUser(user, ":" + _serverName + " 451 * :You have not registered");
-    //     return;
-    // }
     if (cmd == PASS_STR && !user.getHasValidPassword() && !user.isRegistered())
         handlePass(user, msg);
     else if (cmd == NICK_STR)
