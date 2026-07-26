@@ -62,10 +62,6 @@ class Server
         void serverShutdown();
         void broadcastMessage(const std::string& message, int senderFd, const std::string& channelName);
         User *getUserByNickname(const std::string& nickname);
-
-
-        // int checkConnections(void);
-        
 };
 
 #endif

@@ -271,6 +271,9 @@ void Server::receiveFromClient(size_t index)
     {
         Message msg = Message().parse(rawMessages[i]);
         dispatchMessage(user, msg);
+
+        if(_clientsToDisconnect.find(fd) != _clientsToDisconnect.end())
+            break;
     }
 
     // Logger::debug("Received from socket " + numberToString(_fds[index].fd) + ": " + std::string(buffer));
@@ -1117,27 +1120,31 @@ void Server::handleUnknown(const Message& msg) {
 
 void Server::handleQuit(User& user, const Message& msg)
 {
-    Logger::info("Handling command " + msg.getCommand());
-    int argSize = msg.getArgCount();
-
-    if(argSize < 1)
-    {
-        Logger::warning("QUIT command received with insufficient arguments.");
-        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
-        return;
-    }
+    Logger::info("Handling command " + msg.getCommand() + " with " + numberToString(msg.getArgCount()) + " args.");
 
     std::string nickname = user.getNickname();
     std::map<std::string, Channel>::iterator it = _channels.begin();
     std::set<int> usersToNotify;
     std::string reason = "";
 
-        if(msg.hasTrailing())
-            reason = msg.getTrailing();
-        else if(msg.getArgCount() >= 2)
-            reason = msg.getArgs()[1];
-        else
-            reason = nickname;
+    if(msg.hasTrailing())
+    {
+        // Logger::debug("has trailing");
+        reason = msg.getTrailing();
+    }
+    else if(msg.getArgCount() >= 1)
+    {
+        reason = msg.getArgs()[0];
+        // Logger::debug("reason = " + reason);
+    }
+    else
+        reason = "Client Quit";
+    
+    if(!user.isRegistered())
+    {
+        scheduleDisconnection(user.getFd());
+        return;
+    }
 
     while (it != _channels.end()) 
     {
@@ -1169,7 +1176,7 @@ void Server::handleQuit(User& user, const Message& msg)
             "!" + user.getUsername() +
             "@" + _serverName +
             " QUIT " + 
-            " :" + reason;
+            ":" + reason;
 
     for(std::set<int>::const_iterator it = usersToNotify.begin(); it != usersToNotify.end(); ++it)
     {
@@ -1180,7 +1187,10 @@ void Server::handleQuit(User& user, const Message& msg)
         if(userIt != _users.end())
             sendToUser(userIt->second, quitMessage);
     }
+
+    scheduleDisconnection(user.getFd());
 }
+
 void Server::dispatchMessage(User& user, const Message& msg) {
     std::string cmd = msg.getCommand();
     // remove \n and \r if present
@@ -1189,6 +1199,11 @@ void Server::dispatchMessage(User& user, const Message& msg) {
     if (!cmd.empty() && cmd[cmd.size() - 1] == '\r')
         cmd.erase(cmd.size() - 1);
     toLowerCase(cmd);
+    if (cmd == QUIT_STR && !user.isRegistered())
+    {
+        handleQuit(user, msg);
+        return;
+    }
 
     if (cmd == PASS_STR && !user.getHasValidPassword() && !user.isRegistered())
         handlePass(user, msg);
@@ -1224,6 +1239,8 @@ void Server::dispatchMessage(User& user, const Message& msg) {
             handleTopic(user, msg);
         else if (cmd == PRIVMSG_STR)
             handlePrivMsg(user, msg);
+        else if (cmd == QUIT_STR)
+            handleQuit(user, msg);
         else
             handleUnknown(msg);
     }
