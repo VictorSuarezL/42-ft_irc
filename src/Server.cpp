@@ -41,6 +41,24 @@ Server::Server(const std::string &port, const std::string &password) : _port(0),
         Logger::error("Invalid password: " + password);
         exit(EXIT_FAILURE);
     }
+    std::time_t now = std::time(NULL);
+    char *date = std::ctime(&now);
+
+    if (date != NULL)
+    {
+        _creationDate = date;
+
+        // std::ctime termina con '\n'
+        if (!_creationDate.empty()
+            && _creationDate[_creationDate.size() - 1] == '\n')
+        {
+            _creationDate.erase(_creationDate.size() - 1);
+        }
+    }
+    else
+    {
+        _creationDate = "unknown";
+    }
     createSocket();
     Logger::info("Server created on port " + numberToString(_port) + " with password: " + _password);
 }
@@ -1220,6 +1238,41 @@ void Server::dispatchMessage(User& user, const Message& msg) {
     if (user.getHasValidPassword() && user.hasNickname() && user.hasUsername() && !user.isRegistered())
     {
         user.setIsRegistered(true);
+        std::string reply =
+            ":" + _serverName + " 001 " + user.getNickname()
+            + " :Welcome to the Internet Relay Network "
+            + user.getNickname() + "!"
+            + user.getUsername() + "@"
+            + _serverName +"\r\n";
+
+        sendToUser(user, reply);
+
+        reply =
+            ":" + _serverName + " 002 " + user.getNickname()
+            + " :Your host is " + _serverName
+            + ", running version ft_irc-1.0";
+
+        sendToUser(user, reply);
+
+        reply =
+            ":" + _serverName + " 003 " + user.getNickname()
+            + " :This server was created " + _creationDate;
+
+        sendToUser(user, reply);
+
+        reply =
+            ":" + _serverName
+            + " 004 " + user.getNickname()
+            + " " + _serverName
+            + " ft_irc-1.0 - itkol";
+
+        sendToUser(user, reply);
+
+        reply =
+            ":" + _serverName + " 422 " + user.getNickname()
+            + " :MOTD File is missing";
+
+        sendToUser(user, reply);
     }
     if(user.isRegistered())
     {

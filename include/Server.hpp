@@ -23,6 +23,7 @@ class Server
         volatile static bool _serverStop;
         std::map<std::string, Channel> _channels;
         std::set<int> _clientsToDisconnect;
+        std::string _creationDate;
 
         bool parsePort(const std::string &port);
         bool parsePassword(const std::string &password);
