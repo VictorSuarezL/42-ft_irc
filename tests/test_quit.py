@@ -47,7 +47,7 @@ class QuitTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :Client Quit",
+            f":alice!alice@{self.server_name} QUIT :Client Quit",
         )
         self.assert_connection_closed(alice)
 
@@ -66,7 +66,7 @@ class QuitTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :Leaving for lunch",
+            f":alice!alice@{self.server_name} QUIT :Leaving for lunch",
         )
         self.assert_connection_closed(alice)
 
@@ -85,7 +85,7 @@ class QuitTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :goodbye",
+            f":alice!alice@{self.server_name} QUIT :goodbye",
         )
         self.assert_connection_closed(alice)
 
@@ -104,7 +104,7 @@ class QuitTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :",
+            f":alice!alice@{self.server_name} QUIT :",
         )
         self.assert_connection_closed(alice)
 
@@ -126,7 +126,7 @@ class QuitTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            ":alice!alice_user@host QUIT :bye",
+            f":alice!alice_user@{self.server_name} QUIT :bye",
         )
 
     def test_quit_is_not_sent_to_users_without_shared_channels(self):
@@ -146,7 +146,7 @@ class QuitTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :bye",
+            f":alice!alice@{self.server_name} QUIT :bye",
         )
         self.assert_no_message(outsider)
 
@@ -170,7 +170,7 @@ class QuitTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :shared channels",
+            f":alice!alice@{self.server_name} QUIT :shared channels",
         )
         self.assert_no_message(bob)
 
@@ -194,7 +194,7 @@ class QuitTests(IRCIntegrationTest):
 
         alice.send_command("QUIT :bye everyone")
 
-        expected = ":alice!alice@host QUIT :bye everyone"
+        expected = f":alice!alice@{self.server_name} QUIT :bye everyone"
         self.expect_exact(bob, expected)
         self.expect_exact(charlie, expected)
         self.assert_no_message(bob)
@@ -215,7 +215,7 @@ class QuitTests(IRCIntegrationTest):
 
         received = self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :bye",
+            f":alice!alice@{self.server_name} QUIT :bye",
         )
         self.assertNotIn(self.CHANNEL, received[-1])
 
@@ -233,7 +233,7 @@ class QuitTests(IRCIntegrationTest):
         alice.send_command("QUIT :bye")
         self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :bye",
+            f":alice!alice@{self.server_name} QUIT :bye",
         )
 
         bob.send_command("PING :bob-survives")
@@ -254,7 +254,7 @@ class QuitTests(IRCIntegrationTest):
         alice.send_command("QUIT :bye")
         self.expect_exact(
             observer,
-            ":alice!alice@host QUIT :bye",
+            f":alice!alice@{self.server_name} QUIT :bye",
         )
         self.assert_connection_closed(alice)
 
@@ -299,20 +299,20 @@ class QuitTests(IRCIntegrationTest):
         operator.send_command(f"MODE {self.CHANNEL} +l 2")
         self.expect_exact(
             operator,
-            f":operator!operator@host MODE {self.CHANNEL} +l 2",
+            f":operator!operator@{self.server_name} MODE {self.CHANNEL} +l 2",
         )
 
         charlie.send_command(f"JOIN {self.CHANNEL}")
         self.expect_exact(
             charlie,
-            f":host 471 charlie {self.CHANNEL} "
+            f":{self.server_name} 471 charlie {self.CHANNEL} "
             ":Cannot join channel (+l)",
         )
 
         alice.send_command("QUIT :freeing slot")
         self.expect_exact(
             operator,
-            ":alice!alice@host QUIT :freeing slot",
+            f":alice!alice@{self.server_name} QUIT :freeing slot",
         )
 
         self.join_channel(charlie, "charlie", self.CHANNEL)
@@ -329,13 +329,13 @@ class QuitTests(IRCIntegrationTest):
         alice.send_command(f"MODE {self.CHANNEL} +o bob")
         self.expect_exact(
             alice,
-            f":alice!alice@host MODE {self.CHANNEL} +o bob",
+            f":alice!alice@{self.server_name} MODE {self.CHANNEL} +o bob",
         )
 
         alice.send_command("QUIT :leaving")
         self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :leaving",
+            f":alice!alice@{self.server_name} QUIT :leaving",
         )
         self.assert_connection_closed(alice)
 
@@ -348,7 +348,7 @@ class QuitTests(IRCIntegrationTest):
         replacement.send_command(f"MODE {self.CHANNEL} +i")
         self.expect_exact(
             replacement,
-            f":host 482 alice {self.CHANNEL} "
+            f":{self.server_name} 482 alice {self.CHANNEL} "
             ":You're not channel operator",
         )
 
@@ -360,12 +360,12 @@ class QuitTests(IRCIntegrationTest):
         operator.send_command(f"MODE {self.CHANNEL} +i")
         self.expect_exact(
             operator,
-            f":operator!operator@host MODE {self.CHANNEL} +i",
+            f":operator!operator@{self.server_name} MODE {self.CHANNEL} +i",
         )
         operator.send_command(f"INVITE bob {self.CHANNEL}")
         self.expect_exact(
             bob,
-            f":operator!operator@host INVITE bob :{self.CHANNEL}",
+            f":operator!operator@{self.server_name} INVITE bob :{self.CHANNEL}",
         )
 
         bob.send_command("QUIT :before joining")
@@ -375,7 +375,7 @@ class QuitTests(IRCIntegrationTest):
         replacement.send_command(f"JOIN {self.CHANNEL}")
         self.expect_exact(
             replacement,
-            f":host 473 bob {self.CHANNEL} "
+            f":{self.server_name} 473 bob {self.CHANNEL} "
             ":Cannot join channel (+i)",
         )
 
@@ -397,7 +397,7 @@ class QuitTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            ":alice!alice@host QUIT :leaving",
+            f":alice!alice@{self.server_name} QUIT :leaving",
         )
         self.assert_no_message(bob)
 

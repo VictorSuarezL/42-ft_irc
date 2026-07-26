@@ -19,7 +19,7 @@ class MessagingTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":alice!alice@host PRIVMSG #general :Hello channel",
+            f":alice!alice@{self.server_name} PRIVMSG #general :Hello channel",
         )
 
     def test_private_message_reaches_target_user(self):
@@ -30,7 +30,7 @@ class MessagingTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":alice!alice@host PRIVMSG bob :Hello Bob",
+            f":alice!alice@{self.server_name} PRIVMSG bob :Hello Bob",
         )
 
     def test_privmsg_to_unknown_user_returns_401(self):
@@ -40,7 +40,7 @@ class MessagingTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 401 alice nobody :No such nick/channel",
+            f":{self.server_name} 401 alice nobody :No such nick/channel",
         )
 
     def test_non_member_cannot_send_to_channel(self):
@@ -52,5 +52,5 @@ class MessagingTests(IRCIntegrationTest):
 
         self.expect(
             outsider,
-            ":host 404 outsider #general :Cannot send to channel",
+            f":{self.server_name} 404 outsider #general :Cannot send to channel",
         )

@@ -114,6 +114,7 @@ class IRCIntegrationTest(unittest.TestCase):
         self.server = IRCServerProcess(self.PASSWORD)
         self.server.start()
         self.clients = []
+        self.server_name = self.discover_server_name()
 
     def tearDown(self):
         for client in self.clients:
@@ -124,6 +125,23 @@ class IRCIntegrationTest(unittest.TestCase):
         client = IRCClient("127.0.0.1", self.server.port)
         self.clients.append(client)
         return client
+
+    def discover_server_name(self):
+        client = IRCClient("127.0.0.1", self.server.port)
+        nickname = "serverprobe"
+        try:
+            client.register(nickname, self.PASSWORD)
+            lines = client.receive_until(
+                " 001 " + nickname + " ",
+                self.RESPONSE_TIMEOUT,
+            )
+        finally:
+            client.close()
+
+        welcome = next(
+            line for line in lines if " 001 " + nickname + " " in line
+        )
+        return welcome[1:].split(" ", 1)[0]
 
     def register_client(self, nickname, password=None, username=None):
         client = self.new_client()

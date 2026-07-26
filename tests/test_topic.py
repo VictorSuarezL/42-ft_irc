@@ -53,7 +53,7 @@ class TopicTests(IRCIntegrationTest):
 
         self.expect(
             regular,
-            ":host 482 bob #general :You're not channel operator",
+            f":{self.server_name} 482 bob #general :You're not channel operator",
         )
 
     def test_topic_for_unknown_channel_returns_403(self):
@@ -63,7 +63,7 @@ class TopicTests(IRCIntegrationTest):
 
         self.expect(
             client,
-            ":host 403 alice #missing :No such channel",
+            f":{self.server_name} 403 alice #missing :No such channel",
         )
 
     def test_topic_restricted_channel_allows_operator_change(self):
@@ -77,7 +77,7 @@ class TopicTests(IRCIntegrationTest):
 
         self.expect(
             operator,
-            f":alice!alice@host TOPIC {self.CHANNEL} :New topic",
+            f":alice!alice@{self.server_name} TOPIC {self.CHANNEL} :New topic",
         )
 
     def test_topic_change_broadcasts_to_all_members(self):
@@ -96,13 +96,13 @@ class TopicTests(IRCIntegrationTest):
 
         self.expect(
             operator,
-            f":alice!alice@host TOPIC {self.CHANNEL} :New topic",
+            f":alice!alice@{self.server_name} TOPIC {self.CHANNEL} :New topic",
         )
         self.expect(
             bob,
-            f":alice!alice@host TOPIC {self.CHANNEL} :New topic",
+            f":alice!alice@{self.server_name} TOPIC {self.CHANNEL} :New topic",
         )
         self.expect(
             charlie,
-            f":alice!alice@host TOPIC {self.CHANNEL} :New topic",
+            f":alice!alice@{self.server_name} TOPIC {self.CHANNEL} :New topic",
         )

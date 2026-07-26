@@ -17,7 +17,7 @@ class InviteOnlyTests(IRCIntegrationTest):
 
         self.expect(
             uninvited,
-            ":host 473 uninvited #inviteonly "
+            f":{self.server_name} 473 uninvited #inviteonly "
             ":Cannot join channel (+i)",
         )
 
@@ -51,7 +51,7 @@ class InviteOnlyTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":bob!bob@host JOIN "
+            f":bob!bob@{self.server_name} JOIN "
             + self.CHANNEL,
         )
 
@@ -77,7 +77,7 @@ class InviteOnlyTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":host 482 bob #inviteonly "
+            f":{self.server_name} 482 bob #inviteonly "
             ":You're not channel operator",
         )
 
@@ -86,7 +86,7 @@ class InviteOnlyTests(IRCIntegrationTest):
 
         self.expect(
             charlie,
-            ":charlie!charlie@host JOIN "
+            f":charlie!charlie@{self.server_name} JOIN "
             + self.CHANNEL,
         )
 
@@ -109,7 +109,7 @@ class InviteOnlyTests(IRCIntegrationTest):
         bob.send_command("JOIN " + self.CHANNEL)
         self.expect(
             bob,
-            ":host 473 bob #inviteonly :Cannot join channel (+i)",
+            f":{self.server_name} 473 bob #inviteonly :Cannot join channel (+i)",
         )
 
         operator.send_command(
@@ -122,6 +122,6 @@ class InviteOnlyTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":bob!bob@host JOIN "
+            f":bob!bob@{self.server_name} JOIN "
             + self.CHANNEL,
         )

@@ -22,7 +22,7 @@ class CombinedChannelModeTests(IRCIntegrationTest):
 
     def assert_channel_modes(self, client, nickname, expected_modes):
         expected = (
-            f":host 324 {nickname} {self.CHANNEL} {expected_modes}"
+            f":{self.server_name} 324 {nickname} {self.CHANNEL} {expected_modes}"
         )
         client.send_command(f"MODE {self.CHANNEL}")
         self.expect_exact(client, expected)
@@ -36,7 +36,7 @@ class CombinedChannelModeTests(IRCIntegrationTest):
     ):
         command = f"MODE {self.CHANNEL} {mode_expression}"
         expected = (
-            f":operator!operator@host MODE "
+            f":operator!operator@{self.server_name} MODE "
             f"{self.CHANNEL} {mode_expression}"
         )
 
@@ -159,7 +159,7 @@ class CombinedChannelModeTests(IRCIntegrationTest):
         )
         self.expect_exact(
             operator,
-            f":bob!bob@host TOPIC {self.CHANNEL} :topic set by bob",
+            f":bob!bob@{self.server_name} TOPIC {self.CHANNEL} :topic set by bob",
         )
 
         charlie.send_command(
@@ -167,7 +167,7 @@ class CombinedChannelModeTests(IRCIntegrationTest):
         )
         self.expect_exact(
             operator,
-            f":charlie!charlie@host TOPIC "
+            f":charlie!charlie@{self.server_name} TOPIC "
             f"{self.CHANNEL} :topic set by charlie",
         )
 
@@ -199,13 +199,13 @@ class CombinedChannelModeTests(IRCIntegrationTest):
         bob.send_command(f"TOPIC {self.CHANNEL} :allowed")
         self.expect_exact(
             operator,
-            f":bob!bob@host TOPIC {self.CHANNEL} :allowed",
+            f":bob!bob@{self.server_name} TOPIC {self.CHANNEL} :allowed",
         )
 
         charlie.send_command(f"TOPIC {self.CHANNEL} :forbidden")
         self.expect(
             charlie,
-            f":host 482 charlie {self.CHANNEL} "
+            f":{self.server_name} 482 charlie {self.CHANNEL} "
             ":You're not channel operator",
         )
 
@@ -216,12 +216,12 @@ class CombinedChannelModeTests(IRCIntegrationTest):
         operator.send_command(f"MODE {self.CHANNEL} +izt")
         self.expect(
             operator,
-            ":host 472 operator z :is unknown mode char to me",
+            f":{self.server_name} 472 operator z :is unknown mode char to me",
         )
 
         self.expect_exact(
             bob,
-            f":operator!operator@host MODE {self.CHANNEL} +it",
+            f":operator!operator@{self.server_name} MODE {self.CHANNEL} +it",
         )
         self.assert_channel_modes(operator, "operator", "+it")
 
@@ -237,7 +237,7 @@ class CombinedChannelModeTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            f":operator!operator@host MODE "
+            f":operator!operator@{self.server_name} MODE "
             f"{self.CHANNEL} +ik secret",
         )
         self.assert_channel_modes(
@@ -255,12 +255,12 @@ class CombinedChannelModeTests(IRCIntegrationTest):
         )
         self.expect(
             operator,
-            ":host 461 operator MODE :Not enough parameters",
+            f":{self.server_name} 461 operator MODE :Not enough parameters",
         )
 
         self.expect_exact(
             bob,
-            f":operator!operator@host MODE "
+            f":operator!operator@{self.server_name} MODE "
             f"{self.CHANNEL} +ik secret",
         )
         self.assert_channel_modes(

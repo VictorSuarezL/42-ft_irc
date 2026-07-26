@@ -12,7 +12,7 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 461 alice INVITE :Not enough parameters",
+            f":{self.server_name} 461 alice INVITE :Not enough parameters",
         )
 
     def test_invite_nonexistent_user_returns_401(self):
@@ -23,7 +23,7 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 401 alice charlie :No such nick/channel",
+            f":{self.server_name} 401 alice charlie :No such nick/channel",
         )
 
     def test_invite_nonexistent_channel_returns_403(self):
@@ -33,7 +33,7 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 403 alice #nonexistent :No such channel",
+            f":{self.server_name} 403 alice #nonexistent :No such channel",
         )
 
     def test_inviter_not_in_channel_returns_442(self):
@@ -53,7 +53,7 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 442 alice #general :You're not on that channel",
+            f":{self.server_name} 442 alice #general :You're not on that channel",
         )
 
     def test_invite_user_not_operator_returns_482(self):
@@ -66,7 +66,7 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":host 482 bob #general :You're not channel operator",
+            f":{self.server_name} 482 bob #general :You're not channel operator",
         )
 
     def test_invite_user_already_in_channel_returns_443(self):
@@ -79,7 +79,7 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 443 alice bob #general :is already on channel",
+            f":{self.server_name} 443 alice bob #general :is already on channel",
         )
 
     def test_invite_broadcasts_to_target_user(self):
@@ -89,7 +89,7 @@ class InviteTests(IRCIntegrationTest):
 
         alice.send_command("INVITE bob " + self.CHANNEL)
 
-        self.expect(bob, f":alice!alice@host INVITE bob :{self.CHANNEL}")
+        self.expect(bob, f":alice!alice@{self.server_name} INVITE bob :{self.CHANNEL}")
 
         self.expect(alice, f" 341 alice bob {self.CHANNEL}")
 
@@ -122,14 +122,14 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":host 473 bob #general :Cannot join channel (+i)",
+            f":{self.server_name} 473 bob #general :Cannot join channel (+i)",
         )
 
         alice.send_command("INVITE bob " + self.CHANNEL)
 
         bob.send_command("JOIN " + self.CHANNEL)
 
-        self.expect(bob, f":bob!bob@host JOIN {self.CHANNEL}")
+        self.expect(bob, f":bob!bob@{self.server_name} JOIN {self.CHANNEL}")
 
     def test_invitation_is_removed_after_user_joins(self):
         alice = self.register_client("alice")
@@ -143,12 +143,12 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            f":alice!alice@host INVITE bob :{self.CHANNEL}",
+            f":alice!alice@{self.server_name} INVITE bob :{self.CHANNEL}",
         )
 
         bob.send_command("JOIN " + self.CHANNEL)
 
-        self.expect(bob, f":bob!bob@host JOIN {self.CHANNEL}")
+        self.expect(bob, f":bob!bob@{self.server_name} JOIN {self.CHANNEL}")
 
         bob.send_command("PART " + self.CHANNEL)
 
@@ -156,5 +156,5 @@ class InviteTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":host 473 bob #general :Cannot join channel (+i)",
+            f":{self.server_name} 473 bob #general :Cannot join channel (+i)",
         )

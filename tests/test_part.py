@@ -29,7 +29,7 @@ class PartTests(IRCIntegrationTest):
 
         self.expect_exact(
             alice,
-            ":host 461 alice PART :Not enough parameters",
+            f":{self.server_name} 461 alice PART :Not enough parameters",
         )
 
     def test_part_unknown_channel_returns_403(self):
@@ -39,7 +39,7 @@ class PartTests(IRCIntegrationTest):
 
         self.expect_exact(
             alice,
-            ":host 403 alice #missing :No such channel",
+            f":{self.server_name} 403 alice #missing :No such channel",
         )
 
     def test_part_user_not_in_channel_returns_442(self):
@@ -52,7 +52,7 @@ class PartTests(IRCIntegrationTest):
 
         self.expect_exact(
             bob,
-            f":host 442 bob {self.CHANNEL} "
+            f":{self.server_name} 442 bob {self.CHANNEL} "
             ":You're not on that channel",
         )
 
@@ -67,7 +67,7 @@ class PartTests(IRCIntegrationTest):
         bob.drain()
 
         expected = (
-            f":bob!bob@host PART {self.CHANNEL} "
+            f":bob!bob@{self.server_name} PART {self.CHANNEL} "
             ":Leaving for lunch"
         )
         bob.send_command(
@@ -87,7 +87,7 @@ class PartTests(IRCIntegrationTest):
         outsider.drain()
 
         expected = (
-            f":bob!bob@host PART {self.CHANNEL} :goodbye"
+            f":bob!bob@{self.server_name} PART {self.CHANNEL} :goodbye"
         )
         bob.send_command(f"PART {self.CHANNEL} :goodbye")
 
@@ -104,7 +104,7 @@ class PartTests(IRCIntegrationTest):
         bob.send_command(f"PART {self.CHANNEL}")
 
         expected = (
-            f":bob!bob@host PART {self.CHANNEL} :bob"
+            f":bob!bob@{self.server_name} PART {self.CHANNEL} :bob"
         )
         self.expect_exact(bob, expected)
         self.expect_exact(operator, expected)
@@ -116,7 +116,7 @@ class PartTests(IRCIntegrationTest):
         bob.send_command(f"PART {self.CHANNEL} goodbye")
 
         expected = (
-            f":bob!bob@host PART {self.CHANNEL} :goodbye"
+            f":bob!bob@{self.server_name} PART {self.CHANNEL} :goodbye"
         )
         self.expect_exact(bob, expected)
         self.expect_exact(operator, expected)
@@ -127,7 +127,7 @@ class PartTests(IRCIntegrationTest):
 
         bob.send_command(f"PART {self.CHANNEL} :")
 
-        expected = f":bob!bob@host PART {self.CHANNEL} :"
+        expected = f":bob!bob@{self.server_name} PART {self.CHANNEL} :"
         self.expect_exact(bob, expected)
         self.expect_exact(operator, expected)
 
@@ -138,7 +138,7 @@ class PartTests(IRCIntegrationTest):
         bob.send_command(f"PART {self.CHANNEL} :leaving")
         self.expect_exact(
             bob,
-            f":bob!bob@host PART {self.CHANNEL} :leaving",
+            f":bob!bob@{self.server_name} PART {self.CHANNEL} :leaving",
         )
 
         bob.send_command(
@@ -146,7 +146,7 @@ class PartTests(IRCIntegrationTest):
         )
         self.expect_exact(
             bob,
-            f":host 404 bob {self.CHANNEL} "
+            f":{self.server_name} 404 bob {self.CHANNEL} "
             ":Cannot send to channel",
         )
 
@@ -161,13 +161,13 @@ class PartTests(IRCIntegrationTest):
         bob.send_command(f"PART {self.CHANNEL} :temporary")
         self.expect_exact(
             bob,
-            f":bob!bob@host PART {self.CHANNEL} :temporary",
+            f":bob!bob@{self.server_name} PART {self.CHANNEL} :temporary",
         )
 
         self.join_channel(bob, "bob", self.CHANNEL)
         self.expect_exact(
             operator,
-            f":bob!bob@host JOIN {self.CHANNEL}",
+            f":bob!bob@{self.server_name} JOIN {self.CHANNEL}",
         )
 
     def test_parting_one_channel_preserves_other_memberships(self):
@@ -185,7 +185,7 @@ class PartTests(IRCIntegrationTest):
         alice.send_command("PART #one :only leaving one")
 
         expected = (
-            ":alice!alice@host PART #one :only leaving one"
+            f":alice!alice@{self.server_name} PART #one :only leaving one"
         )
         self.expect_exact(alice, expected)
         self.expect_exact(bob, expected)
@@ -193,13 +193,13 @@ class PartTests(IRCIntegrationTest):
         alice.send_command("PRIVMSG #one :not allowed")
         self.expect_exact(
             alice,
-            ":host 404 alice #one :Cannot send to channel",
+            f":{self.server_name} 404 alice #one :Cannot send to channel",
         )
 
         alice.send_command("PRIVMSG #two :still here")
         self.expect_exact(
             bob,
-            ":alice!alice@host PRIVMSG #two :still here",
+            f":alice!alice@{self.server_name} PRIVMSG #two :still here",
         )
 
     def test_last_member_parting_removes_channel(self):
@@ -209,7 +209,7 @@ class PartTests(IRCIntegrationTest):
         alice.send_command("PART #temporary :last member")
         self.expect_exact(
             alice,
-            ":alice!alice@host PART #temporary :last member",
+            f":alice!alice@{self.server_name} PART #temporary :last member",
         )
 
         bob = self.register_client("bob")
@@ -233,20 +233,20 @@ class PartTests(IRCIntegrationTest):
         operator.send_command(f"MODE {self.CHANNEL} +l 2")
         self.expect_exact(
             operator,
-            f":operator!operator@host MODE {self.CHANNEL} +l 2",
+            f":operator!operator@{self.server_name} MODE {self.CHANNEL} +l 2",
         )
 
         charlie.send_command(f"JOIN {self.CHANNEL}")
         self.expect_exact(
             charlie,
-            f":host 471 charlie {self.CHANNEL} "
+            f":{self.server_name} 471 charlie {self.CHANNEL} "
             ":Cannot join channel (+l)",
         )
 
         bob.send_command(f"PART {self.CHANNEL} :freeing slot")
         self.expect_exact(
             bob,
-            f":bob!bob@host PART {self.CHANNEL} :freeing slot",
+            f":bob!bob@{self.server_name} PART {self.CHANNEL} :freeing slot",
         )
 
         self.join_channel(charlie, "charlie", self.CHANNEL)
@@ -259,26 +259,26 @@ class PartTests(IRCIntegrationTest):
         operator.send_command(f"MODE {self.CHANNEL} +i")
         self.expect_exact(
             operator,
-            f":operator!operator@host MODE {self.CHANNEL} +i",
+            f":operator!operator@{self.server_name} MODE {self.CHANNEL} +i",
         )
 
         operator.send_command(f"INVITE bob {self.CHANNEL}")
         self.expect_exact(
             bob,
-            f":operator!operator@host INVITE bob :{self.CHANNEL}",
+            f":operator!operator@{self.server_name} INVITE bob :{self.CHANNEL}",
         )
         self.join_channel(bob, "bob", self.CHANNEL)
 
         bob.send_command(f"PART {self.CHANNEL} :leaving")
         self.expect_exact(
             bob,
-            f":bob!bob@host PART {self.CHANNEL} :leaving",
+            f":bob!bob@{self.server_name} PART {self.CHANNEL} :leaving",
         )
 
         bob.send_command(f"JOIN {self.CHANNEL}")
         self.expect_exact(
             bob,
-            f":host 473 bob {self.CHANNEL} "
+            f":{self.server_name} 473 bob {self.CHANNEL} "
             ":Cannot join channel (+i)",
         )
 
@@ -290,7 +290,7 @@ class PartTests(IRCIntegrationTest):
         operator.send_command(f"MODE {self.CHANNEL} +k secret")
         self.expect_exact(
             operator,
-            f":operator!operator@host MODE "
+            f":operator!operator@{self.server_name} MODE "
             f"{self.CHANNEL} +k secret",
         )
 
@@ -304,13 +304,13 @@ class PartTests(IRCIntegrationTest):
         bob.send_command(f"PART {self.CHANNEL} :leaving")
         self.expect_exact(
             bob,
-            f":bob!bob@host PART {self.CHANNEL} :leaving",
+            f":bob!bob@{self.server_name} PART {self.CHANNEL} :leaving",
         )
 
         bob.send_command(f"JOIN {self.CHANNEL}")
         self.expect_exact(
             bob,
-            f":host 475 bob {self.CHANNEL} "
+            f":{self.server_name} 475 bob {self.CHANNEL} "
             ":Cannot join channel (+k)",
         )
 
@@ -330,13 +330,13 @@ class PartTests(IRCIntegrationTest):
         alice.send_command(f"MODE {self.CHANNEL} +o bob")
         self.expect_exact(
             alice,
-            f":alice!alice@host MODE {self.CHANNEL} +o bob",
+            f":alice!alice@{self.server_name} MODE {self.CHANNEL} +o bob",
         )
 
         alice.send_command(f"PART {self.CHANNEL} :leaving")
         self.expect_exact(
             alice,
-            f":alice!alice@host PART {self.CHANNEL} :leaving",
+            f":alice!alice@{self.server_name} PART {self.CHANNEL} :leaving",
         )
 
         self.join_channel(alice, "alice", self.CHANNEL)
@@ -344,7 +344,7 @@ class PartTests(IRCIntegrationTest):
         alice.send_command(f"MODE {self.CHANNEL} +i")
         self.expect_exact(
             alice,
-            f":host 482 alice {self.CHANNEL} "
+            f":{self.server_name} 482 alice {self.CHANNEL} "
             ":You're not channel operator",
         )
 
@@ -363,10 +363,10 @@ class PartTests(IRCIntegrationTest):
         alice.send_command("PART #one,#two :leaving both")
 
         expected_one = (
-            ":alice!alice@host PART #one :leaving both"
+            f":alice!alice@{self.server_name} PART #one :leaving both"
         )
         expected_two = (
-            ":alice!alice@host PART #two :leaving both"
+            f":alice!alice@{self.server_name} PART #two :leaving both"
         )
 
         self.expect_exact(alice, expected_one)
@@ -377,12 +377,12 @@ class PartTests(IRCIntegrationTest):
         alice.send_command("PRIVMSG #one :rejected")
         self.expect_exact(
             alice,
-            ":host 404 alice #one :Cannot send to channel",
+            f":{self.server_name} 404 alice #one :Cannot send to channel",
         )
         alice.send_command("PRIVMSG #two :rejected")
         self.expect_exact(
             alice,
-            ":host 404 alice #two :Cannot send to channel",
+            f":{self.server_name} 404 alice #two :Cannot send to channel",
         )
 
     def test_part_channel_list_continues_after_invalid_channel(self):
@@ -400,11 +400,11 @@ class PartTests(IRCIntegrationTest):
 
         self.expect_exact(
             alice,
-            ":host 403 alice #missing :No such channel",
+            f":{self.server_name} 403 alice #missing :No such channel",
         )
 
         expected = (
-            ":alice!alice@host PART #valid "
+            f":alice!alice@{self.server_name} PART #valid "
             ":process every channel"
         )
         self.expect_exact(alice, expected)
@@ -413,5 +413,5 @@ class PartTests(IRCIntegrationTest):
         alice.send_command("PRIVMSG #valid :rejected")
         self.expect_exact(
             alice,
-            ":host 404 alice #valid :Cannot send to channel",
+            f":{self.server_name} 404 alice #valid :Cannot send to channel",
         )

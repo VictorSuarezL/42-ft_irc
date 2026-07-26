@@ -11,7 +11,7 @@ class KickTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 461 alice KICK :Not enough parameters",
+            f":{self.server_name} 461 alice KICK :Not enough parameters",
         )
 
     def test_kick_nonexistent_channel_returns_403(self):
@@ -21,7 +21,7 @@ class KickTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 403 alice #nonexistent :No such channel",
+            f":{self.server_name} 403 alice #nonexistent :No such channel",
         )
 
     def test_kicker_not_in_channel_returns_442(self):
@@ -41,7 +41,7 @@ class KickTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 442 alice #general :You're not on that channel",
+            f":{self.server_name} 442 alice #general :You're not on that channel",
         )
 
     def test_kick_from_nooperator_returns_482(self):
@@ -54,7 +54,7 @@ class KickTests(IRCIntegrationTest):
 
         self.expect(
             bob,
-            ":host 482 bob #general :You're not channel operator",
+            f":{self.server_name} 482 bob #general :You're not channel operator",
         )
 
     def test_kick_target_not_in_channel_returns_441(self):
@@ -66,7 +66,7 @@ class KickTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 441 alice bob #general "
+            f":{self.server_name} 441 alice bob #general "
             ":They aren't on that channel",
         )
 
@@ -81,7 +81,7 @@ class KickTests(IRCIntegrationTest):
 
         operator.send_command("KICK " + self.CHANNEL + " alice :You are being kicked!")
 
-        self.expect(bob, f":operator!operator@host KICK {self.CHANNEL} alice :You are being kicked!")
+        self.expect(bob, f":operator!operator@{self.server_name} KICK {self.CHANNEL} alice :You are being kicked!")
 
     def test_kick_without_reason_uses_kicker_nickname_as_reason(self):
         operator = self.register_client("operator")
@@ -91,7 +91,7 @@ class KickTests(IRCIntegrationTest):
 
         operator.send_command("KICK " + self.CHANNEL + " alice")
 
-        self.expect(alice, f":operator!operator@host KICK {self.CHANNEL} alice :operator")
+        self.expect(alice, f":operator!operator@{self.server_name} KICK {self.CHANNEL} alice :operator")
 
     def test_kicked_user_is_removed_from_channel(self):
         operator = self.register_client("operator")
@@ -109,7 +109,7 @@ class KickTests(IRCIntegrationTest):
         alice.send_command("PRIVMSG " + self.CHANNEL + " :Hello everyone!")
         self.expect(
             alice,
-            ":host 404 alice #general :Cannot send to channel",
+            f":{self.server_name} 404 alice #general :Cannot send to channel",
         )
 
         # KICK did not disconnect Alice from the server.

@@ -20,7 +20,7 @@ class JoinTests(IRCIntegrationTest):
 
         self.join_channel(bob, "bob", self.CHANNEL)
 
-        self.expect(alice, ":bob!bob@host JOIN #general")
+        self.expect(alice, f":bob!bob@{self.server_name} JOIN #general")
 
     def test_invalid_channel_name_returns_476(self):
         alice = self.register_client("alice")
@@ -29,7 +29,7 @@ class JoinTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 476 alice general :Bad Channel Mask",
+            f":{self.server_name} 476 alice general :Bad Channel Mask",
         )
 
     def test_joining_same_channel_twice_returns_443(self):
@@ -40,6 +40,6 @@ class JoinTests(IRCIntegrationTest):
 
         self.expect(
             alice,
-            ":host 443 alice alice #general "
+            f":{self.server_name} 443 alice alice #general "
             ":is already on channel",
         )

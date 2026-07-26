@@ -36,24 +36,27 @@ class RegistrationTests(IRCIntegrationTest):
         )
         self.assertEqual(
             lines[0],
-            ":host 001 alice :Welcome to the Internet Relay Network "
-            "alice!alice_user@host",
+            f":{self.server_name} 001 alice :Welcome to the Internet Relay Network "
+            f"alice!alice_user@{self.server_name}",
         )
         self.assertEqual(
             lines[1],
-            ":host 002 alice :Your host is host, running version ft_irc-1.0",
+            f":{self.server_name} 002 alice :Your host is "
+            f"{self.server_name}, running version ft_irc-1.0",
         )
         self.assertRegex(
             lines[2],
-            r"^:host 003 alice :This server was created \S.*$",
+            rf"^:{re.escape(self.server_name)} 003 alice "
+            r":This server was created \S.*$",
         )
         self.assertEqual(
             lines[3],
-            ":host 004 alice host ft_irc-1.0 - itkol",
+            f":{self.server_name} 004 alice "
+            f"{self.server_name} ft_irc-1.0 - itkol",
         )
         self.assertEqual(
             lines[4],
-            ":host 422 alice :MOTD File is missing",
+            f":{self.server_name} 422 alice :MOTD File is missing",
         )
 
     def test_003_creation_date_is_shared_by_all_registrations(self):
@@ -67,8 +70,17 @@ class RegistrationTests(IRCIntegrationTest):
 
         alice_003 = next(line for line in alice_lines if " 003 alice " in line)
         bob_003 = next(line for line in bob_lines if " 003 bob " in line)
-        alice_date = re.sub(r"^:host 003 alice :This server was created ", "", alice_003)
-        bob_date = re.sub(r"^:host 003 bob :This server was created ", "", bob_003)
+        prefix = re.escape(self.server_name)
+        alice_date = re.sub(
+            rf"^:{prefix} 003 alice :This server was created ",
+            "",
+            alice_003,
+        )
+        bob_date = re.sub(
+            rf"^:{prefix} 003 bob :This server was created ",
+            "",
+            bob_003,
+        )
 
         self.assertTrue(alice_date, "The 003 creation date must not be empty")
         self.assertEqual(alice_date, bob_date)
@@ -83,7 +95,7 @@ class RegistrationTests(IRCIntegrationTest):
 
         lines = self.expect(
             client,
-            ":host 451 alice :You have not registered",
+            f":{self.server_name} 451 alice :You have not registered",
         )
 
         self.assert_no_welcome_replies(lines)
@@ -99,10 +111,10 @@ class RegistrationTests(IRCIntegrationTest):
 
         lines = self.expect(
             client,
-            ":host 451 alice :You have not registered",
+            f":{self.server_name} 451 alice :You have not registered",
         )
 
-        self.assertIn(":host 464 * :Password incorrect", lines)
+        self.assertIn(f":{self.server_name} 464 * :Password incorrect", lines)
         self.assert_no_welcome_replies(lines)
 
     def test_welcome_sequence_is_sent_only_once(self):
@@ -131,14 +143,14 @@ class RegistrationTests(IRCIntegrationTest):
 
         client.send_command("PASS wrongpassword")
 
-        self.expect(client, ":host 464 * :Password incorrect")
+        self.expect(client, f":{self.server_name} 464 * :Password incorrect")
 
     def test_command_before_registration_returns_451(self):
         client = self.new_client()
 
         client.send_command("JOIN #general")
 
-        self.expect(client, ":host 451 * :You have not registered")
+        self.expect(client, f":{self.server_name} 451 * :You have not registered")
 
     def test_duplicate_nickname_returns_433(self):
         self.register_client("alice")
@@ -149,7 +161,7 @@ class RegistrationTests(IRCIntegrationTest):
 
         self.expect(
             second,
-            ":host 433 * alice :Nickname is already in use",
+            f":{self.server_name} 433 * alice :Nickname is already in use",
         )
 
     def test_registration_commands_can_arrive_in_one_packet(self):
