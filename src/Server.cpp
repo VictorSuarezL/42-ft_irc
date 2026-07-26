@@ -1115,6 +1115,72 @@ void Server::handleUnknown(const Message& msg) {
     // Implement handling for unknown commands here
 }
 
+void Server::handleQuit(User& user, const Message& msg)
+{
+    Logger::info("Handling command " + msg.getCommand());
+    int argSize = msg.getArgCount();
+
+    if(argSize < 1)
+    {
+        Logger::warning("QUIT command received with insufficient arguments.");
+        errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
+        return;
+    }
+
+    std::string nickname = user.getNickname();
+    std::map<std::string, Channel>::iterator it = _channels.begin();
+    std::set<int> usersToNotify;
+    std::string reason = "";
+
+        if(msg.hasTrailing())
+            reason = msg.getTrailing();
+        else if(msg.getArgCount() >= 2)
+            reason = msg.getArgs()[1];
+        else
+            reason = nickname;
+
+    while (it != _channels.end()) 
+    {
+        std::map<std::string, Channel>::iterator current = it;
+        ++it;
+
+        Channel& channel = current->second;
+
+        if (channel.hasUser(user.getFd())) 
+        {
+            std::set<int> channelUsers = channel.getUsers();
+
+            for(std::set<int>::const_iterator it = channelUsers.begin(); it != channelUsers.end(); ++it)
+            {
+                int userFd = *it;
+
+                if(userFd != user.getFd())
+                    usersToNotify.insert(userFd);
+
+            }
+            channel.removeUser(user);
+
+            if (channel.getUserCount() == 0)
+                _channels.erase(current);
+        }
+    }
+
+    std::string quitMessage = ":" + user.getNickname() +
+            "!" + user.getUsername() +
+            "@" + _serverName +
+            " QUIT " + 
+            " :" + reason;
+
+    for(std::set<int>::const_iterator it = usersToNotify.begin(); it != usersToNotify.end(); ++it)
+    {
+        int userFd = *it;
+
+        std::map<int, User>::iterator userIt = _users.find(userFd);
+
+        if(userIt != _users.end())
+            sendToUser(userIt->second, quitMessage);
+    }
+}
 void Server::dispatchMessage(User& user, const Message& msg) {
     std::string cmd = msg.getCommand();
     // remove \n and \r if present
