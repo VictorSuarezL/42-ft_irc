@@ -696,7 +696,7 @@ void Server::handleMode(User& user, const Message& msg) {
         std::string appliedParameters = "";
         size_t parameterIndex = 2;
         char currentSign;
-        char lastSign;
+        char lastSign = '\0';
 
         for (size_t i = 0; i < modeChanges.size(); ++i)
         {            
@@ -985,7 +985,7 @@ void Server::handleInvite(User &user, const Message& msg) {
     channel.inviteUser(*targetUser);
     Logger::info("User " + user.getNickname() + " invited " + targetNickname + " to channel " + channelName);
 
-    // TODO - Remove user from invitation list
+    channel.removeInvite(user);
     
     std::string confirmation =
         ":" + _serverName
@@ -1243,7 +1243,7 @@ void Server::dispatchMessage(User& user, const Message& msg) {
             + " :Welcome to the Internet Relay Network "
             + user.getNickname() + "!"
             + user.getUsername() + "@"
-            + _serverName +"\r\n";
+            + _serverName;
 
         sendToUser(user, reply);
 
@@ -1506,4 +1506,3 @@ void Server::processDisconnections()
         disconnectClient(fd);
     }
 }
-

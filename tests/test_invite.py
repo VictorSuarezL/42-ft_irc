@@ -141,6 +141,11 @@ class InviteTests(IRCIntegrationTest):
 
         alice.send_command("INVITE bob " + self.CHANNEL)
 
+        self.expect(
+            bob,
+            f":alice!alice@host INVITE bob :{self.CHANNEL}",
+        )
+
         bob.send_command("JOIN " + self.CHANNEL)
 
         self.expect(bob, f":bob!bob@host JOIN {self.CHANNEL}")
