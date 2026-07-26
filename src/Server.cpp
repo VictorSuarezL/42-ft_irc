@@ -911,7 +911,7 @@ void Server::handleKick(User &user, const Message& msg) {
         + " :"
         + reason;
 
-    sendToUser(*targetUser, notification);
+    sendToUser(user, notification);
     broadcastMessage(notification, user.getFd(), channelName);
 
     if(channel.isOperator(targetUser->getFd()))
@@ -1131,9 +1131,9 @@ void Server::handlePrivMsg(User& user, const Message& msg) {
     }
 }
 
-void Server::handleUnknown(const Message& msg) {
+void Server::handleUnknown(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
-    // Implement handling for unknown commands here
+    errorBuilder(user, "ERR_UNKNOWNCOMMAND", msg.getCommand());
 }
 
 void Server::handleQuit(User& user, const Message& msg)
@@ -1295,7 +1295,7 @@ void Server::dispatchMessage(User& user, const Message& msg) {
         else if (cmd == QUIT_STR)
             handleQuit(user, msg);
         else
-            handleUnknown(msg);
+            handleUnknown(user, msg);
     }
 }
 

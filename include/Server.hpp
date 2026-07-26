@@ -54,7 +54,7 @@ class Server
         void handleQuit(User &user, const Message &msg);
         void handleTopic(User& user, const Message& msg);
         void handlePrivMsg(User& user, const Message& msg);
-        void handleUnknown(const Message& msg);
+        void handleUnknown(User& user, const Message& msg);
         void errorBuilder(User& user, const std::string& errorCode, const std::string& parameters = "");
         bool isNicknameInUse(const std::string& nickname) const;
         static void signalHandler(int signal);

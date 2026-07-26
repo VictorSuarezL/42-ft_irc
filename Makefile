@@ -1,5 +1,6 @@
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I$(INCDIR)
+DEPFLAGS = -MMD -MP
 
 SRCDIR = src
 INCDIR = include
@@ -9,6 +10,7 @@ SRC_FILES = Channel Errors Logger main Message Parser Server User
 
 SRC = $(addprefix $(SRCDIR)/, $(addsuffix .cpp, $(SRC_FILES)))
 OBJFILES = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(SRC_FILES)))
+DEPFILES = $(OBJFILES:.o=.d)
 
 NAME = ircserv
 
@@ -19,7 +21,9 @@ $(NAME): $(OBJFILES)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	mkdir -p $(OBJDIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
+
+-include $(DEPFILES)
 
 clean:
 	rm -rf $(OBJDIR)
