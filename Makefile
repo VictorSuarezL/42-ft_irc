@@ -1,12 +1,14 @@
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I$(SRCDIR)/include
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I$(INCDIR)
 
 SRCDIR = src
 INCDIR = include
 OBJDIR = obj
 
-INFILES = $(wildcard $(SRCDIR)/*.cpp)
-OBJFILES = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(INFILES))
+SRC_FILES = Channel Errors Logger main Message Parser Server User
+
+SRC = $(addprefix $(SRCDIR)/, $(addsuffix .cpp, $(SRC_FILES)))
+OBJFILES = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(SRC_FILES)))
 
 NAME = ircserv
 
@@ -17,7 +19,7 @@ $(NAME): $(OBJFILES)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	mkdir -p $(OBJDIR)
-	$(CXX) $(CXXFLAGS) -I$(INCDIR) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(OBJDIR)
@@ -27,7 +29,4 @@ fclean: clean
 
 re: fclean all
 
-test: all
-	python3 -B -m unittest discover -s tests -t . -v
-
-.PHONY: all clean fclean re test
+.PHONY: all clean fclean re 

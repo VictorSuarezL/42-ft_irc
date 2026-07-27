@@ -23,6 +23,7 @@ class Server
         volatile static bool _serverStop;
         std::map<std::string, Channel> _channels;
         std::set<int> _clientsToDisconnect;
+        std::string _creationDate;
 
         bool parsePort(const std::string &port);
         bool parsePassword(const std::string &password);
@@ -50,10 +51,11 @@ class Server
         void handleMode(User& user, const Message& msg);
         void handleInvite(User &user, const Message &msg);
         void handleKick(User &user, const Message &msg);
+        void handleQuit(User &user, const Message &msg);
         void handleTopic(User& user, const Message& msg);
         void handlePrivMsg(User& user, const Message& msg);
-        void handleUnknown(const Message& msg);
-        void errorBuilder(User& user, const std::string& errorCode);
+        void handleUnknown(User& user, const Message& msg);
+        void errorBuilder(User& user, const std::string& errorCode, const std::string& parameters = "");
         bool isNicknameInUse(const std::string& nickname) const;
         static void signalHandler(int signal);
         static void setServerStop(bool value);
@@ -61,10 +63,6 @@ class Server
         void serverShutdown();
         void broadcastMessage(const std::string& message, int senderFd, const std::string& channelName);
         User *getUserByNickname(const std::string& nickname);
-
-
-        // int checkConnections(void);
-        
 };
 
 #endif

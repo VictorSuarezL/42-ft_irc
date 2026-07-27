@@ -6,7 +6,7 @@ Channel::Channel(){
     _inviteOnly = false;
     _topicRestricted = false;
     _channelKey = "";
-    _userLimit = -1;
+    _userLimit = 0;
     _isModerated = false;
 }
 
@@ -145,7 +145,12 @@ void Channel::printChannelInfo() const {
     std::cout << "Invite Only: " << (_inviteOnly ? "Yes" : "No") << std::endl;
     std::cout << "Topic Restricted: " << (_topicRestricted ? "Yes" : "No") << std::endl;
     std::cout << "Channel Key: " << (_channelKey.empty() ? "None" : _channelKey) << std::endl;
-    std::cout << "User Limit: " << (_userLimit > 0 ? std::to_string(_userLimit) : "None") << std::endl;
+    std::cout << "User Limit: ";
+    if (_userLimit > 0)
+        std::cout << _userLimit;
+    else
+        std::cout << "None";
+    std::cout << std::endl;
     std::cout << std::endl;
 }
 
