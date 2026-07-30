@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include "Logger.hpp"
+#include <ctime>
 
 bool Server::parsePort(const std::string &portStr)
 {
@@ -734,8 +735,10 @@ void Server::handleMode(User& user, const Message& msg) {
                         std::string providedKey = args[parameterIndex++];
                         channel.setChannelKey(providedKey);
                         if (!appliedParameters.empty())
+                        {
                             appliedParameters += " ";
-                            appliedParameters += providedKey;
+                        }
+                        appliedParameters += providedKey;
                         } else {
                             channel.setChannelKey("");
                         }
