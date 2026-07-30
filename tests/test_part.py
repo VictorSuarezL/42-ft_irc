@@ -151,7 +151,7 @@ class PartTests(IRCIntegrationTest):
         )
 
         bob.send_command("PING :still-connected")
-        self.expect_exact(bob, "PONG :still-connected")
+        self.expect_exact(bob, ":host PONG host :still-connected")
         self.assert_server_running()
 
     def test_user_can_rejoin_channel_after_part(self):

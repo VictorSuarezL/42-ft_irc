@@ -126,7 +126,7 @@ class RegistrationTests(IRCIntegrationTest):
             "USER alice 0 * :Alice Again\r\n"
             "PING welcome-not-repeated\r\n"
         )
-        lines = self.expect(client, "PONG :welcome-not-repeated")
+        lines = self.expect(client, "PONG host :welcome-not-repeated")
 
         self.assert_no_welcome_replies(lines)
 
@@ -135,7 +135,7 @@ class RegistrationTests(IRCIntegrationTest):
 
         client.send_command("PING still-registered")
 
-        self.expect(client, "PONG :still-registered")
+        self.expect(client, "PONG host :still-registered")
         self.assert_server_running()
 
     def test_invalid_password_returns_464(self):
@@ -173,5 +173,5 @@ class RegistrationTests(IRCIntegrationTest):
             "PING bundle-complete\r\n".format(self.PASSWORD)
         )
 
-        self.expect(client, "PONG :bundle-complete")
+        self.expect(client, "PONG host :bundle-complete")
         self.assert_server_running()

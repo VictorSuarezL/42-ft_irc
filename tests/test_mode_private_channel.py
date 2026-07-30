@@ -12,7 +12,7 @@ class PrivateChannelTests(IRCIntegrationTest):
 
         operator.send_command("MODE " + self.CHANNEL + " +k 123pass")
         operator.send_command("PING :mode private set")
-        self.expect(operator, "PONG :mode private set")
+        self.expect(operator, "PONG host :mode private set")
 
         alice.send_command("JOIN " + self.CHANNEL)
         self.expect(alice, f":{self.server_name} 475 alice " + self.CHANNEL + " :Cannot join channel (+k)")
@@ -32,7 +32,7 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +k correct-key"
         )
         operator.send_command("PING :key-set")
-        self.expect(operator, "PONG :key-set")
+        self.expect(operator, "PONG host :key-set")
 
         bob.send_command(
             f"JOIN {self.CHANNEL} wrong-key"
@@ -111,7 +111,7 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +k 123pass"
         )
         operator.send_command("PING :key-set")
-        self.expect(operator, "PONG :key-set")
+        self.expect(operator, "PONG host :key-set")
 
         bob.send_command(f"JOIN {self.CHANNEL}")
         self.expect(
@@ -124,7 +124,7 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} -k 123pass"
         )
         operator.send_command("PING :key-removed")
-        self.expect(operator, "PONG :key-removed")
+        self.expect(operator, "PONG host :key-removed")
 
         bob.send_command(f"JOIN {self.CHANNEL}")
 
@@ -141,7 +141,7 @@ class PrivateChannelTests(IRCIntegrationTest):
 
         operator.send_command("MODE " + self.CHANNEL + " +k 123pass")
         operator.send_command("PING :mode private set")
-        self.expect(operator, "PONG :mode private set")
+        self.expect(operator, "PONG host :mode private set")
         operator.send_command("MODE " + self.CHANNEL)
 
         self.expect(operator, f":{self.server_name} 324 operator {self.CHANNEL} +k 123pass")
@@ -160,7 +160,7 @@ class PrivateChannelTests(IRCIntegrationTest):
 
         operator.send_command("MODE " + self.CHANNEL + " +k 123pass")
         operator.send_command("PING :mode private set")
-        self.expect(operator, "PONG :mode private set")
+        self.expect(operator, "PONG host :mode private set")
 
         self.expect(bob, f":operator!username@{self.server_name} MODE " + self.CHANNEL + " +k 123pass")
 
@@ -189,7 +189,7 @@ class PrivateChannelTests(IRCIntegrationTest):
 
         operator.send_command("MODE " + self.CHANNEL + " +k 123pass")
         operator.send_command("PING :mode private set")
-        self.expect(operator, "PONG :mode private set")
+        self.expect(operator, "PONG host :mode private set")
 
         bob.send_command("JOIN " + self.CHANNEL + " 123pass")
         self.expect(bob, f":bob!bob@{self.server_name} JOIN " + self.CHANNEL)
@@ -241,7 +241,7 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +k 123pass"
         )
         operator.send_command("PING :key-set")
-        self.expect(operator, "PONG :key-set")
+        self.expect(operator, "PONG host :key-set")
 
         bob.send_command(f"JOIN {self.CHANNEL}")
         self.expect(
@@ -254,7 +254,7 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} -k 123pass"
         )
         operator.send_command("PING :key-removed")
-        self.expect(operator, "PONG :key-removed")
+        self.expect(operator, "PONG host :key-removed")
 
         bob.send_command(f"JOIN {self.CHANNEL}")
 
@@ -277,7 +277,7 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +k correct-key"
         )
         operator.send_command("PING :key-set")
-        self.expect(operator, "PONG :key-set")
+        self.expect(operator, "PONG host :key-set")
 
         bob.send_command(
             f"JOIN {self.CHANNEL} wrong-key"
@@ -311,7 +311,7 @@ class PrivateChannelTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +ik secret"
         )
         operator.send_command("PING :modes-set")
-        self.expect(operator, "PONG :modes-set")
+        self.expect(operator, "PONG host :modes-set")
 
         operator.send_command(
             f"INVITE bob {self.CHANNEL}"

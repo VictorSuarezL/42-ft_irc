@@ -152,7 +152,7 @@ class IRCIntegrationTest(unittest.TestCase):
         )
         token = "registration-" + nickname
         client.send_command("PING " + token)
-        self.expect(client, "PONG :" + token)
+        self.expect(client, "PONG host :" + token)
         return client
 
     def join_channel(self, client, nickname, channel, key=None):

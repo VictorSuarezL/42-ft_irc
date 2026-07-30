@@ -11,7 +11,7 @@ class InviteOnlyTests(IRCIntegrationTest):
 
         operator.send_command("MODE " + self.CHANNEL + " +i")
         operator.send_command("PING :mode invite only set")
-        self.expect(operator, "PONG :mode invite only set")
+        self.expect(operator, "PONG host :mode invite only set")
 
         uninvited.send_command("JOIN " + self.CHANNEL)
 
@@ -35,7 +35,7 @@ class InviteOnlyTests(IRCIntegrationTest):
             "MODE " + self.CHANNEL + " +i"
         )
         operator.send_command("PING :mode-enabled")
-        self.expect(operator, "PONG :mode-enabled")
+        self.expect(operator, "PONG host :mode-enabled")
 
         operator.send_command(
             "INVITE bob " + self.CHANNEL
@@ -104,7 +104,7 @@ class InviteOnlyTests(IRCIntegrationTest):
             "MODE " + self.CHANNEL + " +i"
         )
         operator.send_command("PING :mode-enabled")
-        self.expect(operator, "PONG :mode-enabled")
+        self.expect(operator, "PONG host :mode-enabled")
 
         bob.send_command("JOIN " + self.CHANNEL)
         self.expect(
@@ -116,7 +116,7 @@ class InviteOnlyTests(IRCIntegrationTest):
             "MODE " + self.CHANNEL + " -i"
         )
         operator.send_command("PING :mode-disabled")
-        self.expect(operator, "PONG :mode-disabled")
+        self.expect(operator, "PONG host :mode-disabled")
 
         bob.send_command("JOIN " + self.CHANNEL)
 

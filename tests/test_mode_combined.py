@@ -233,7 +233,7 @@ class CombinedChannelModeTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +ikl secret invalid"
         )
         operator.send_command("PING :invalid-combined-mode")
-        self.expect(operator, "PONG :invalid-combined-mode")
+        self.expect(operator, "PONG host :invalid-combined-mode")
 
         self.expect_exact(
             bob,

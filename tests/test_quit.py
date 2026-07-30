@@ -237,7 +237,7 @@ class QuitTests(IRCIntegrationTest):
         )
 
         bob.send_command("PING :bob-survives")
-        self.expect_exact(bob, "PONG :bob-survives")
+        self.expect_exact(bob, ":host PONG host :bob-survives")
         self.assert_server_running()
 
     def test_quit_releases_nickname(self):
@@ -260,7 +260,10 @@ class QuitTests(IRCIntegrationTest):
 
         replacement = self.register_client("alice")
         replacement.send_command("PING :nickname-reused")
-        self.expect_exact(replacement, "PONG :nickname-reused")
+        self.expect_exact(
+            replacement,
+            ":host PONG host :nickname-reused",
+        )
 
     def test_quit_removes_channel_when_last_member_leaves(self):
         alice = self.register_client("alice")

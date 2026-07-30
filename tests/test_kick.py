@@ -114,6 +114,6 @@ class KickTests(IRCIntegrationTest):
 
         # KICK did not disconnect Alice from the server.
         alice.send_command("PING :after-kick")
-        self.expect(alice, "PONG :after-kick")
+        self.expect(alice, "PONG host :after-kick")
 
         self.assert_server_running()

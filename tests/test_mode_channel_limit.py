@@ -118,7 +118,7 @@ class ChannelLimitTests(IRCIntegrationTest):
             # invalid MODE parameter.
             token = f"invalid-limit-{index}"
             operator.send_command(f"PING :{token}")
-            self.expect(operator, f"PONG :{token}")
+            self.expect(operator, f"PONG host :{token}")
 
             self.assert_channel_modes(
                 operator,
@@ -256,7 +256,7 @@ class ChannelLimitTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +kl secret 2"
         )
         operator.send_command("PING :combined-kl")
-        self.expect(operator, "PONG :combined-kl")
+        self.expect(operator, "PONG host :combined-kl")
 
         self.assert_channel_modes(
             operator,
@@ -287,7 +287,7 @@ class ChannelLimitTests(IRCIntegrationTest):
             f"MODE {self.CHANNEL} +lk 2 secret"
         )
         operator.send_command("PING :combined-lk")
-        self.expect(operator, "PONG :combined-lk")
+        self.expect(operator, "PONG host :combined-lk")
 
         # MODE queries normalize the display order to +kl and therefore
         # must also normalize the associated parameter order.

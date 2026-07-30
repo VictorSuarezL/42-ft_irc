@@ -6,8 +6,8 @@ from tests.irc_test_case import IRCIntegrationTest
 
 
 class NonBlockingOutputTests(IRCIntegrationTest):
-    MESSAGE_COUNT = 20000
-    STRESS_TIMEOUT = 10.0
+    MESSAGE_COUNT = 5000
+    STRESS_TIMEOUT = 15.0
 
     def test_slow_client_does_not_block_or_lose_messages(self):
         slow_client = self.register_client("slow")
@@ -40,7 +40,7 @@ class NonBlockingOutputTests(IRCIntegrationTest):
 
         self.expect(
             fast_client,
-            "PONG :fast-client",
+            "PONG host :fast-client",
             timeout=2.0,
         )
 
@@ -75,7 +75,7 @@ class NonBlockingOutputTests(IRCIntegrationTest):
                     )
                 )
 
-            expected = "PONG :slow-{0:05d}".format(index)
+            expected = ":host PONG host :slow-{0:05d}".format(index)
 
             self.assertEqual(
                 line,

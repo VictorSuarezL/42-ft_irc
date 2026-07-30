@@ -16,7 +16,7 @@ class DisconnectionTests(IRCIntegrationTest):
         survivor = self.register_client("survivor")
 
         survivor.send_command("PING server-alive")
-        self.expect(survivor, "PONG :server-alive")
+        self.expect(survivor, "PONG host :server-alive")
         self.assert_server_running()
 
     def test_disconnected_user_releases_nickname(self):
@@ -27,12 +27,12 @@ class DisconnectionTests(IRCIntegrationTest):
 
         # Sincroniza con el servidor sin utilizar sleep().
         observer.send_command("PING cleanup-finished")
-        self.expect(observer, "PONG :cleanup-finished")
+        self.expect(observer, "PONG host :cleanup-finished")
 
         replacement = self.register_client("alice")
 
         replacement.send_command("PING nickname-reused")
-        self.expect(replacement, "PONG :nickname-reused")
+        self.expect(replacement, "PONG host :nickname-reused")
         self.assert_server_running()
 
     def test_disconnection_removes_empty_channel(self):
@@ -45,7 +45,7 @@ class DisconnectionTests(IRCIntegrationTest):
         # Cuando recibamos este PONG, la desconexión anterior
         # ya debería haber sido procesada.
         observer.send_command("PING cleanup-finished")
-        self.expect(observer, "PONG :cleanup-finished")
+        self.expect(observer, "PONG host :cleanup-finished")
 
         replies = self.join_channel(
             observer,
@@ -70,5 +70,5 @@ class DisconnectionTests(IRCIntegrationTest):
         alice.close()
 
         bob.send_command("PING bob-survives")
-        self.expect(bob, "PONG :bob-survives")
+        self.expect(bob, "PONG host :bob-survives")
         self.assert_server_running()

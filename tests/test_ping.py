@@ -7,4 +7,4 @@ class PingTests(IRCIntegrationTest):
 
         client.send_command("PING :trailing-token")
 
-        self.expect(client, "PONG :trailing-token")
+        self.expect(client, "PONG host :trailing-token")
