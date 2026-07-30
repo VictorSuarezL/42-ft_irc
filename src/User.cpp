@@ -51,7 +51,6 @@ bool User::isRegistered() const {
 }
 
 void User::setIsRegistered(bool isRegistered) {
-    // Logger::debug("Setting isRegistered for user on socket " + numberToString(_fd) + " to " + (isRegistered ? "true" : "false"));
     _isRegistered = isRegistered;
 }
 
@@ -76,7 +75,6 @@ void User::setOutputBuffer(const std::string& outputBuffer) {
 }
 
 void User::appendToInputBuffer(const std::string& data) {
-    // Logger::debug("Appending to input buffer of user on socket " + numberToString(_fd) + ": " + data);
     _inputBuffer += data;
 }
 

@@ -194,7 +194,6 @@ void Server::sendPendingData(size_t index)
 
         if(sent > 0)
         {
-            // Logger::debug("Sent " + numberToString(sent) + " bytes to socket " + numberToString(fd) + ".");
             user.consumeOutputBuffer(sent);
         }
         else if(sent < 0 && errno == EINTR)
@@ -629,95 +628,6 @@ void Server::handlePing(User& user, const Message& msg) {
     Logger::debug(":" + _serverName + " PONG " + _serverName + " :" + pongResponse);
     sendToUser(user, ":" + _serverName + " PONG " + _serverName + " :" + pongResponse);
 }
-
-// void Server::handleCap(User& user, const Message& msg)
-// {
-//     Logger::info("Handling command " + msg.getCommand());
-
-//     if (msg.getArgCount() < 1)
-//     {
-//         errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
-//         return;
-//     }
-
-//     std::string subcommand = msg.getArgs()[0];
-//     toLowerCase(subcommand);
-//     if (subcommand == "ls")
-//     {
-//         std::string recipient = user.getNickname();
-//         if (recipient.empty())
-//             recipient = "*";
-//         sendToUser(user, ":" + _serverName + " CAP " + recipient + " LS :");
-//     }
-//     else if (subcommand == "list")
-//     {
-//         std::string recipient = user.getNickname();
-//         if (recipient.empty())
-//             recipient = "*";
-//         sendToUser(user, ":" + _serverName + " CAP " + recipient + " LIST :");
-//     }
-//     else if (subcommand == "req")
-//     {
-//         std::string recipient = user.getNickname();
-//         if (recipient.empty())
-//             recipient = "*";
-//         std::string capabilities = msg.hasTrailing()
-//             ? msg.getTrailing() : msg.getArgsAsString();
-//         if (!msg.hasTrailing() && capabilities.size() > subcommand.size())
-//             capabilities.erase(0, subcommand.size() + 1);
-//         sendToUser(user, ":" + _serverName + " CAP " + recipient
-//             + " NAK :" + capabilities);
-//     }
-//     // CAP END needs no reply when no capabilities are being negotiated.
-// }
-
-// void Server::handleWho(User& user, const Message& msg)
-// {
-//     Logger::info("Handling command " + msg.getCommand());
-
-//     std::string mask = msg.getArgCount() > 0 ? msg.getArgs()[0] : "0";
-//     std::set<int> matches;
-
-//     std::map<std::string, Channel>::iterator channelIt = _channels.find(mask);
-//     if (channelIt != _channels.end())
-//         matches = channelIt->second.getUsers();
-//     else
-//     {
-//         for (std::map<int, User>::iterator it = _users.begin();
-//             it != _users.end(); ++it)
-//         {
-//             if (!it->second.isRegistered())
-//                 continue;
-//             if (mask == "0" || mask == "*"
-//                 || mask == it->second.getNickname())
-//                 matches.insert(it->first);
-//         }
-//     }
-
-//     for (std::set<int>::iterator it = matches.begin(); it != matches.end(); ++it)
-//     {
-//         std::map<int, User>::iterator matched = _users.find(*it);
-//         if (matched == _users.end())
-//             continue;
-
-//         std::string channelName = channelIt != _channels.end() ? mask : "*";
-//         std::string flags = "H";
-//         if (channelIt != _channels.end() && channelIt->second.isOperator(*it))
-//             flags += "@";
-
-//         sendToUser(user, ":" + _serverName + " 352 " + user.getNickname()
-//             + " " + channelName
-//             + " " + matched->second.getUsername()
-//             + " " + _serverName
-//             + " " + _serverName
-//             + " " + matched->second.getNickname()
-//             + " " + flags
-//             + " :0 " + matched->second.getUsername());
-//     }
-
-//     sendToUser(user, ":" + _serverName + " 315 " + user.getNickname()
-//         + " " + mask + " :End of WHO list");
-// }
 
 void Server::handleMode(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
