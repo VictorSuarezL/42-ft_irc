@@ -40,6 +40,7 @@ const std::string PONG_STR = "pong";
 const std::string QUIT_STR = "quit";
 const std::string PRIVMSG_STR = "privmsg";
 const std::string NOTICE_STR = "notice";
+const std::string CAP_STR = "cap";
 
 inline std::string numberToString(int number)
 {

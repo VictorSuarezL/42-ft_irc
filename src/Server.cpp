@@ -352,6 +352,7 @@ void Server::handleUser(User& user, const Message& msg) {
     }
     std::string username = msg.getArgs()[0];
     Logger::debug("Received username: " + msg.getArgs()[0] + " for user on socket " + numberToString(user.getFd()));
+    Logger::debug(msg.getArgs()[0]);
     user.setUsername(msg.getArgs()[0]);
 }
 
@@ -625,9 +626,98 @@ void Server::handlePing(User& user, const Message& msg) {
             pongResponse += " ";
         pongResponse += msg.getTrailing();
     }
-
-    sendToUser(user, "PONG :" + pongResponse);
+    Logger::debug(":" + _serverName + " PONG " + _serverName + " :" + pongResponse);
+    sendToUser(user, ":" + _serverName + " PONG " + _serverName + " :" + pongResponse);
 }
+
+// void Server::handleCap(User& user, const Message& msg)
+// {
+//     Logger::info("Handling command " + msg.getCommand());
+
+//     if (msg.getArgCount() < 1)
+//     {
+//         errorBuilder(user, "ERR_NEEDMOREPARAMS", msg.getCommand());
+//         return;
+//     }
+
+//     std::string subcommand = msg.getArgs()[0];
+//     toLowerCase(subcommand);
+//     if (subcommand == "ls")
+//     {
+//         std::string recipient = user.getNickname();
+//         if (recipient.empty())
+//             recipient = "*";
+//         sendToUser(user, ":" + _serverName + " CAP " + recipient + " LS :");
+//     }
+//     else if (subcommand == "list")
+//     {
+//         std::string recipient = user.getNickname();
+//         if (recipient.empty())
+//             recipient = "*";
+//         sendToUser(user, ":" + _serverName + " CAP " + recipient + " LIST :");
+//     }
+//     else if (subcommand == "req")
+//     {
+//         std::string recipient = user.getNickname();
+//         if (recipient.empty())
+//             recipient = "*";
+//         std::string capabilities = msg.hasTrailing()
+//             ? msg.getTrailing() : msg.getArgsAsString();
+//         if (!msg.hasTrailing() && capabilities.size() > subcommand.size())
+//             capabilities.erase(0, subcommand.size() + 1);
+//         sendToUser(user, ":" + _serverName + " CAP " + recipient
+//             + " NAK :" + capabilities);
+//     }
+//     // CAP END needs no reply when no capabilities are being negotiated.
+// }
+
+// void Server::handleWho(User& user, const Message& msg)
+// {
+//     Logger::info("Handling command " + msg.getCommand());
+
+//     std::string mask = msg.getArgCount() > 0 ? msg.getArgs()[0] : "0";
+//     std::set<int> matches;
+
+//     std::map<std::string, Channel>::iterator channelIt = _channels.find(mask);
+//     if (channelIt != _channels.end())
+//         matches = channelIt->second.getUsers();
+//     else
+//     {
+//         for (std::map<int, User>::iterator it = _users.begin();
+//             it != _users.end(); ++it)
+//         {
+//             if (!it->second.isRegistered())
+//                 continue;
+//             if (mask == "0" || mask == "*"
+//                 || mask == it->second.getNickname())
+//                 matches.insert(it->first);
+//         }
+//     }
+
+//     for (std::set<int>::iterator it = matches.begin(); it != matches.end(); ++it)
+//     {
+//         std::map<int, User>::iterator matched = _users.find(*it);
+//         if (matched == _users.end())
+//             continue;
+
+//         std::string channelName = channelIt != _channels.end() ? mask : "*";
+//         std::string flags = "H";
+//         if (channelIt != _channels.end() && channelIt->second.isOperator(*it))
+//             flags += "@";
+
+//         sendToUser(user, ":" + _serverName + " 352 " + user.getNickname()
+//             + " " + channelName
+//             + " " + matched->second.getUsername()
+//             + " " + _serverName
+//             + " " + _serverName
+//             + " " + matched->second.getNickname()
+//             + " " + flags
+//             + " :0 " + matched->second.getUsername());
+//     }
+
+//     sendToUser(user, ":" + _serverName + " 315 " + user.getNickname()
+//         + " " + mask + " :End of WHO list");
+// }
 
 void Server::handleMode(User& user, const Message& msg) {
     Logger::info("Handling command " + msg.getCommand());
@@ -1226,6 +1316,9 @@ void Server::dispatchMessage(User& user, const Message& msg) {
         return;
     }
 
+    // if (cmd == CAP_STR)
+    //     handleCap(user, msg);
+    // else if (cmd == PASS_STR && !user.getHasValidPassword() && !user.isRegistered())
     if (cmd == PASS_STR && !user.getHasValidPassword() && !user.isRegistered())
         handlePass(user, msg);
     else if (cmd == NICK_STR)
@@ -1276,15 +1369,22 @@ void Server::dispatchMessage(User& user, const Message& msg) {
             + " :MOTD File is missing";
 
         sendToUser(user, reply);
+        return;
     }
     if(user.isRegistered())
     {
-        if (cmd == JOIN_STR)
+        if (cmd == CAP_STR)
+            return;
+        else if (cmd == JOIN_STR)
             handleJoin(user, msg);
         else if (cmd == PART_STR)
             handlePart(user, msg);
         else if (cmd == PING_STR)
             handlePing(user, msg);
+        else if (cmd == PONG_STR)
+            return;
+        // else if (cmd == WHO_STR)
+        //     handleWho(user, msg);
         else if (cmd == MODE_STR)
             handleMode(user, msg);
         else if (cmd == KICK_STR)
@@ -1297,6 +1397,8 @@ void Server::dispatchMessage(User& user, const Message& msg) {
             handlePrivMsg(user, msg);
         else if (cmd == QUIT_STR)
             handleQuit(user, msg);
+        else if (cmd == USER_STR)
+            handleUser(user, msg);
         else
             handleUnknown(user, msg);
     }
