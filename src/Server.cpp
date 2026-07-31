@@ -329,6 +329,7 @@ void Server::handleNick(User& user, const Message& msg) {
         return;
     }
     std::string nickname = msg.getArgs()[0];
+    Logger::debug("Nick name ---> " + nickname);
     // Check if the nickname is already in use
     if (isNicknameInUse(nickname)) {
         Logger::warning("NICK command received with a nickname that is already in use: " + nickname);
@@ -336,6 +337,8 @@ void Server::handleNick(User& user, const Message& msg) {
         return;
     } else {
         Logger::debug("Received nickname: " + nickname + " for user on socket " + numberToString(user.getFd()));
+        if(user.isRegistered())
+            sendToUser(user, ":" + user.getNickname() + "!" + user.getUsername() + "@" + _serverName + " NICK :" + nickname);
         user.setNickname(nickname);
     }
 }
@@ -1135,7 +1138,7 @@ void Server::handlePrivMsg(User& user, const Message& msg) {
 }
 
 void Server::handleUnknown(User& user, const Message& msg) {
-    Logger::info("Handling command " + msg.getCommand());
+    Logger::error("Handling command " + msg.getCommand());
     errorBuilder(user, "ERR_UNKNOWNCOMMAND", msg.getCommand());
 }
 
@@ -1232,7 +1235,10 @@ void Server::dispatchMessage(User& user, const Message& msg) {
     if (cmd == PASS_STR && !user.getHasValidPassword() && !user.isRegistered())
         handlePass(user, msg);
     else if (cmd == NICK_STR)
+    {
         handleNick(user, msg);
+        return;
+    }
     else if (cmd == USER_STR && !user.isRegistered())
         handleUser(user, msg);
     else if (!user.isRegistered())
